@@ -55,9 +55,9 @@ async def on_ready():
 # 起動（環境変数からトークンを読む方式に変更）
 # ============================================================
 async def main():
-    token = os.getenv("DISCORD_BOT_TOKEN")
+    token = os.getenv("DISCORD_TOKEN")
     if not token:
-        print("❌ 環境変数 DISCORD_BOT_TOKEN が設定されていません")
+        print("❌ 環境変数 DISCORD_TOKEN が設定されていません")
         return
     async with bot:
         await bot.start(token)
