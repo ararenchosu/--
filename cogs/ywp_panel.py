@@ -9,14 +9,11 @@ import time
 import unicodedata
 import random
 from datetime import datetime, timezone, timedelta, time as dtime
-
 from cogs.ywp_auto import Client, login_email, RC, YPOINT_ITEM_ID, parse_item_rows, parse_user_data
-
 # ============================================================
 # JST
 # ============================================================
 JST = timezone(timedelta(hours=9))
-
 # ============================================================
 # データ
 # ============================================================
@@ -30,16 +27,13 @@ SLOT_FILE = f"{DATA_DIR}/slots.json"
 QUEUE_FILE = f"{DATA_DIR}/queue.json"
 DEBUG_BUY_FILE = f"{DATA_DIR}/debug_buyhitodama.json"
 DEBUG_GAMEEND_FILE = f"{DATA_DIR}/debug_gameend.json"
-
 # ============================================================
 # 設定
 # ============================================================
 MAX_CONCURRENT_LOOPS = 10
 MAX_SLOTS = 10
-
 HITODAMA_THRESHOLD = 5
 HITODAMA_RESUME_MIN = 5
-
 AUTO_BUY_HITODAMA = True
 AUTO_BUY_GOODS_ID = 1001
 AUTO_BUY_GOODS_IDS = [1001]
@@ -47,50 +41,67 @@ AUTO_BUY_COST_YM = 1000
 AUTO_BUY_MAX_PER_LOOP = 9999
 AUTO_BUY_KEEP_YMONEY = 5000
 AUTO_BUY_HITODAMA_GAIN = 2
-
 BENCH_MAX_STAGES = 8
 BENCH_MAX_SAMPLES = 10
-
 DAILY_REPORT_ENABLED = True
 DAILY_REPORT_HOUR = 23
 DAILY_REPORT_MINUTE = 55
-
 REQUEST_DELAY_MIN = 2.5
 REQUEST_DELAY_MAX = 3.0
 COOLDOWN_MIN = 2.5
 COOLDOWN_MAX = 3.0
-
 ODD_HOUR_REST_ENABLED = True
 ODD_HOUR_REST_MIN = 29
 ODD_HOUR_REST_DURATION = 300
-
-EVENT_SKIP_CODES = (5,100, 1303)
+EVENT_SKIP_CODES = (5, 100, 1303)
 RETRY_CODES = (4, 32, 101, 102)
 RETRY_WAITS = [4, 5, 5]
-
 LOCKED_RC = 5
 LOCKED_STAGE_LIMIT = 3
-
 MAX_CONSECUTIVE_ERRORS = 4
-
 _session_lock = asyncio.Lock()
 _loop_lock = asyncio.Lock()
 _queue_lock = asyncio.Lock()
-
 _panel_hitodama_cache = {}
 _bot_ref = None
-
-
+# ============================================================
+# ステージデータ
+# ============================================================
+STAGE_LIST = [
+    # 通常ステージ
+    ("通常 1-1", "100101"), ("通常 1-2", "100102"), ("通常 1-3", "100103"),
+    ("通常 1-4", "100104"), ("通常 1-5", "100105"), ("通常 1-6", "100106"),
+    ("通常 1-7", "100107"), ("通常 1-8", "100108"), ("通常 1-9", "100109"),
+    ("通常 1-10", "100110"), ("通常 1-11", "100111"), ("通常 1-12", "100112"),
+    ("通常 1-13", "100113"), ("通常 1-14", "100114"), ("通常 1-15", "100115"),
+    # イベントステージ
+    ("イベント 1", "2980101"), ("イベント 2", "2980102"), ("イベント 3", "2980103"),
+    ("イベント 4", "2980104"), ("イベント 5", "2980105"), ("イベント 6", "2980106"),
+    ("イベント 7", "2980107"), ("イベント 8", "2980108"), ("イベント 9", "2980109"),
+    ("イベント 10", "2980110"), ("イベント 11", "2980111"), ("イベント 12", "2980112"),
+    ("イベント 13", "2980113"), ("イベント 14", "2980201"), ("イベント 15", "2980202"),
+    ("イベント 16", "2980203"), ("イベント 17", "2980204"), ("イベント 18", "2980205"),
+    ("イベント 19", "2980206"), ("イベント 20", "2980207"), ("イベント 21", "2980208"),
+    ("イベント 22", "2980209"), ("イベント 23", "2980210"), ("イベント 24", "2980211"),
+    ("イベント 25", "2980212"), ("イベント 26", "2980213"), ("イベント 27", "2980214"),
+    ("イベント 28", "2980215"), ("イベント 29", "2980301"), ("イベント 30", "2980302"),
+    ("イベント 31", "2980303"), ("イベント 32", "2980304"), ("イベント 33", "2980305"),
+    ("イベント 34", "2980306"), ("イベント 35", "2980307"), ("イベント 36", "2980308"),
+    ("イベント 37", "2980309"), ("イベント 38", "2980310"), ("イベント 39", "2980311"),
+    ("イベント 40", "2980312"), ("イベント 41", "29803013"), ("イベント 42", "29803014"),
+    ("イベント 43", "2980314"),
+    # ウラステージ
+    ("ウラ 1-1", "2980401"), ("ウラ 1-2", "2980402"), ("ウラ 1-3", "2980403"),
+    ("ウラ 1-4", "2980404"), ("ウラ 1-5", "2980405"),
+    # 封印ボス
+    ("封印ボス", "2980406"),
+]
 # ============================================================
 # JSON キャッシュ
 # ============================================================
 _json_cache = {}
-
-
 def ensure_dir():
     os.makedirs(DATA_DIR, exist_ok=True)
-
-
 def load_json(path, default=None):
     ensure_dir()
     if not os.path.exists(path):
@@ -109,8 +120,6 @@ def load_json(path, default=None):
         return default or {}
     _json_cache[path] = (mtime, data)
     return data
-
-
 def save_json(path, data):
     ensure_dir()
     with open(path, "w", encoding="utf-8") as f:
@@ -119,21 +128,13 @@ def save_json(path, data):
         _json_cache[path] = (os.path.getmtime(path), data)
     except OSError:
         _json_cache.pop(path, None)
-
-
 def load_loops() -> dict:
     return load_json(LOOP_FILE, {})
-
-
 def save_loops(data):
     save_json(LOOP_FILE, data)
-
-
 async def save_loops_async(data):
     async with _loop_lock:
         save_loops(data)
-
-
 # ============================================================
 # 複数アカウント管理
 # ============================================================
@@ -155,33 +156,21 @@ def _migrate_session(sdata: dict) -> dict:
         "saved_at": sdata.get("saved_at", ""),
     }
     return {"accounts": [acc], "active_index": 0}
-
-
 def load_sessions() -> dict:
     return load_json(SESSION_FILE, {})
-
-
 def save_sessions(data):
     save_json(SESSION_FILE, data)
-
-
 async def save_sessions_async(data):
     async with _session_lock:
         save_sessions(data)
-
-
 def get_user_session(user_id: int) -> dict:
     sessions = load_sessions()
     sdata = sessions.get(str(user_id))
     if not sdata:
         return {"accounts": [], "active_index": 0}
     return _migrate_session(sdata)
-
-
 def get_user_accounts(user_id: int) -> list:
     return get_user_session(user_id).get("accounts", [])
-
-
 def get_active_account(user_id: int) -> dict | None:
     sess = get_user_session(user_id)
     accounts = sess.get("accounts", [])
@@ -191,9 +180,7 @@ def get_active_account(user_id: int) -> dict | None:
     if idx >= len(accounts):
         idx = 0
     return accounts[idx]
-
-
-def get_active_id(user_id):
+def get_active_id(user_id: int) -> str | None:
     sess = get_user_session(user_id)
     accounts = sess.get("accounts", [])
     if not accounts:
@@ -203,9 +190,7 @@ def get_active_id(user_id):
         idx = 0
     acc = accounts[idx]
     return str(acc.get("player_id") or acc.get("userId") or "")
-
-
-def get_session(user_id, account_id=None):
+def get_session(user_id: int, account_id=None) -> dict | None:
     if account_id is None:
         return get_active_account(user_id)
     accounts = get_user_accounts(user_id)
@@ -213,17 +198,13 @@ def get_session(user_id, account_id=None):
         if str(acc.get("player_id")) == str(account_id) or str(acc.get("userId")) == str(account_id):
             return acc
     return None
-
-
-def get_accounts(user_id) -> dict:
+def get_accounts(user_id: int) -> dict:
     out = {}
     for acc in get_user_accounts(user_id):
         gid = str(acc.get("player_id") or acc.get("userId") or "")
         if gid:
             out[gid] = acc
     return out
-
-
 def set_active_index(user_id: int, index: int):
     sessions = load_sessions()
     uid = str(user_id)
@@ -231,9 +212,7 @@ def set_active_index(user_id: int, index: int):
     sess["active_index"] = index
     sessions[uid] = sess
     save_sessions(sessions)
-
-
-async def add_account(user_id, client, player_name: str):
+async def add_account(user_id: int, client: Client, player_name: str):
     store = load_sessions()
     uid = str(user_id)
     sess = _migrate_session(store.get(uid, {}))
@@ -266,9 +245,7 @@ async def add_account(user_id, client, player_name: str):
     store[uid] = sess
     await save_sessions_async(store)
     return gid
-
-
-async def set_active(user_id, account_id) -> bool:
+async def set_active(user_id: int, account_id: str) -> bool:
     sessions = load_sessions()
     uid = str(user_id)
     sess = _migrate_session(sessions.get(uid, {}))
@@ -280,9 +257,7 @@ async def set_active(user_id, account_id) -> bool:
             await save_sessions_async(sessions)
             return True
     return False
-
-
-async def remove_account(user_id, account_id) -> bool:
+async def remove_account(user_id: int, account_id: str) -> bool:
     sessions = load_sessions()
     uid = str(user_id)
     sess = _migrate_session(sessions.get(uid, {}))
@@ -305,10 +280,7 @@ async def remove_account(user_id, account_id) -> bool:
         sessions[uid] = sess
     await save_sessions_async(sessions)
     return True
-
-
-async def remove_all_accounts(user_id) -> int:
-    """ユーザーの全垢を削除（ログアウト）"""
+async def remove_all_accounts(user_id: int) -> int:
     sessions = load_sessions()
     uid = str(user_id)
     if uid not in sessions:
@@ -317,9 +289,7 @@ async def remove_all_accounts(user_id) -> int:
     sessions.pop(uid, None)
     await save_sessions_async(sessions)
     return n
-
-
-async def update_token(user_id, account_id, client):
+async def update_token(user_id: int, account_id: str, client: Client):
     sessions = load_sessions()
     uid = str(user_id)
     sess = _migrate_session(sessions.get(uid, {}))
@@ -332,9 +302,7 @@ async def update_token(user_id, account_id, client):
     sess["accounts"] = accounts
     sessions[uid] = sess
     await save_sessions_async(sessions)
-
-
-def upsert_account(user_id, email, password, client):
+def upsert_account(user_id: int, email: str, password: str, client: Client):
     sessions = load_sessions()
     uid = str(user_id)
     sess = _migrate_session(sessions.get(uid, {}))
@@ -369,8 +337,6 @@ def upsert_account(user_id, email, password, client):
     sessions[uid] = sess
     save_sessions(sessions)
     return new_acc
-
-
 def build_client_from_account(acc: dict) -> Client:
     client = Client(acc["udkey"])
     client.gdkey = acc["gdkey"]
@@ -378,12 +344,8 @@ def build_client_from_account(acc: dict) -> Client:
     client.token = acc["token"]
     client.mst = acc.get("mst", 16897)
     return client
-
-
 def make_client(sdata: dict) -> Client:
     return build_client_from_account(sdata)
-
-
 def update_account_tokens(user_id: int, client: Client):
     sessions = load_sessions()
     uid = str(user_id)
@@ -396,33 +358,23 @@ def update_account_tokens(user_id: int, client: Client):
         sess["accounts"] = accounts
         sessions[uid] = sess
         save_sessions(sessions)
-
-
-def account_busy(account_id) -> bool:
+def account_busy(account_id: str) -> bool:
     for data in load_loops().values():
         if data.get("status") != "running":
             continue
         if str(data.get("account_id") or "") == str(account_id):
             return True
     return False
-
-
 def load_panel() -> dict:
     return load_json(PANEL_FILE, {})
-
-
 def save_panel(data):
     save_json(PANEL_FILE, data)
-
-
 # ============================================================
 # スロット管理
 # ============================================================
 def set_bot_ref(bot):
     global _bot_ref
     _bot_ref = bot
-
-
 def load_slots() -> dict:
     data = load_json(SLOT_FILE, {})
     if "slots" not in data:
@@ -431,12 +383,8 @@ def load_slots() -> dict:
         for i in range(MAX_SLOTS):
             data["slots"].setdefault(str(i), None)
     return data
-
-
 def save_slots(data):
     save_json(SLOT_FILE, data)
-
-
 async def update_panel_on_change():
     if _bot_ref is None:
         return
@@ -451,8 +399,6 @@ async def update_panel_on_change():
             await msg.edit(embed=build_panel_embed(), view=PanelView())
         except Exception as e:
             print(f">>> パネル更新失敗 guild={guild_id}: {e}")
-
-
 def find_free_slot() -> int | None:
     data = load_slots()
     for i in range(MAX_SLOTS):
@@ -460,8 +406,6 @@ def find_free_slot() -> int | None:
         if not s or s.get("status") not in ("running", "paused_hitodama"):
             return i
     return None
-
-
 async def assign_slot(job_key: str, user_id: int, job_type: str, stage_info: str) -> int | None:
     data = load_slots()
     for i in range(MAX_SLOTS):
@@ -479,30 +423,21 @@ async def assign_slot(job_key: str, user_id: int, job_type: str, stage_info: str
             await update_panel_on_change()
             return i
     return None
-
-
 def update_slot(slot_id: int, **kwargs):
     data = load_slots()
     s = data["slots"].get(str(slot_id))
     if s:
         s.update(kwargs)
         save_slots(data)
-
-
 async def release_slot(slot_id: int):
-    """スロット解放 → パネル更新 → 予約キュー実行"""
     data = load_slots()
     data["slots"][str(slot_id)] = None
     save_slots(data)
     await update_panel_on_change()
     asyncio.create_task(process_queue())
-
-
 def get_slot_status() -> dict:
     data = load_slots()
-    running = 0
-    paused = 0
-    free = 0
+    running = paused = free = 0
     for i in range(MAX_SLOTS):
         s = data["slots"].get(str(i))
         if not s:
@@ -512,8 +447,6 @@ def get_slot_status() -> dict:
         elif s.get("status") == "paused_hitodama":
             paused += 1
     return {"running": running, "paused": paused, "free": free}
-
-
 # ============================================================
 # 予約キュー管理
 # ============================================================
@@ -522,19 +455,12 @@ def load_queue() -> list:
     if "queue" not in data:
         data["queue"] = []
     return data["queue"]
-
-
 def save_queue(queue: list):
     save_json(QUEUE_FILE, {"queue": queue})
-
-
 async def save_queue_async(queue: list):
     async with _queue_lock:
         save_queue(queue)
-
-
 async def add_to_queue(user_id: int, job_type: str, stage_info: str, params: dict) -> int:
-    """予約キューに追加 → 順番（1始まり）を返す"""
     queue = load_queue()
     job_key = f"{user_id}_{int(time.time())}_{job_type}"
     entry = {
@@ -551,8 +477,6 @@ async def add_to_queue(user_id: int, job_type: str, stage_info: str, params: dic
     print(f">>> 予約追加: user={user_id} type={job_type} 順番={position}")
     await update_panel_on_change()
     return position
-
-
 async def pop_next_queue() -> dict | None:
     queue = load_queue()
     if not queue:
@@ -560,10 +484,7 @@ async def pop_next_queue() -> dict | None:
     entry = queue.pop(0)
     await save_queue_async(queue)
     return entry
-
-
 async def remove_user_from_queue(user_id: int) -> int:
-    """指定ユーザーの予約を全部削除"""
     queue = load_queue()
     before = len(queue)
     queue = [e for e in queue if e.get("user_id") != user_id]
@@ -573,16 +494,12 @@ async def remove_user_from_queue(user_id: int) -> int:
         print(f">>> 予約削除: user={user_id} {removed}件")
         await update_panel_on_change()
     return removed
-
-
 def get_user_queue_position(user_id: int) -> int | None:
     queue = load_queue()
     for i, e in enumerate(queue):
         if e.get("user_id") == user_id:
             return i + 1
     return None
-
-
 def queue_status() -> dict:
     queue = load_queue()
     by_user = {}
@@ -590,13 +507,10 @@ def queue_status() -> dict:
         uid = e.get("user_id")
         by_user[uid] = by_user.get(uid, 0) + 1
     return {"total": len(queue), "users": len(by_user)}
-
-
 # ============================================================
 # 予約キューの自動実行
 # ============================================================
 async def process_queue():
-    """スロットに空きがあれば予約を実行"""
     while True:
         slot_id = find_free_slot()
         if slot_id is None:
@@ -608,7 +522,6 @@ async def process_queue():
         user_id = entry.get("user_id")
         params = entry.get("params", {})
         print(f">>> 予約実行: user={user_id} type={job_type}")
-
         try:
             if job_type == "farm":
                 asyncio.create_task(run_farm(
@@ -642,21 +555,14 @@ async def process_queue():
                 ))
         except Exception as e:
             print(f">>> 予約実行失敗: {e}")
-
         await asyncio.sleep(0.5)
-
-
 # ============================================================
 # ランダム生成
 # ============================================================
 def rand_request_delay() -> float:
     return random.uniform(REQUEST_DELAY_MIN, REQUEST_DELAY_MAX)
-
-
 def rand_cooldown() -> float:
     return random.uniform(COOLDOWN_MIN, COOLDOWN_MAX)
-
-
 # ============================================================
 # 奇数時間休憩
 # ============================================================
@@ -670,8 +576,6 @@ async def check_odd_hour_rest(loop_key=None):
         print(f">>> 奇数時間休憩終了 → 周回再開")
         return True
     return False
-
-
 # ============================================================
 # 日時パーサ
 # ============================================================
@@ -688,8 +592,6 @@ def parse_datetime(s: str):
         except ValueError:
             continue
     return None
-
-
 # ============================================================
 # 3秒対策
 # ============================================================
@@ -702,8 +604,6 @@ async def safe_defer(interaction, ephemeral=True, thinking=True):
         return True
     except (discord.NotFound, discord.HTTPException):
         return False
-
-
 async def safe_reply(interaction, **kwargs):
     if interaction is None:
         return
@@ -714,18 +614,13 @@ async def safe_reply(interaction, **kwargs):
             return await interaction.response.send_message(**kwargs)
     except (discord.NotFound, discord.HTTPException):
         pass
-
-
 async def safe_edit_original(interaction, **kwargs):
-    """interaction が None でも安全に呼べる edit_original_response"""
     if interaction is None:
         return
     try:
         await interaction.edit_original_response(**kwargs)
     except Exception:
         pass
-
-
 # ============================================================
 # ユーザーの古いジョブを整理
 # ============================================================
@@ -741,8 +636,6 @@ async def cleanup_user_loops(user_id: int):
         del loops[key]
     if keys_to_delete:
         await save_loops_async(loops)
-
-
 # ============================================================
 # ステージパーサ
 # ============================================================
@@ -765,8 +658,6 @@ def parse_stages(stage_raw: str) -> dict:
         except (ValueError, IndexError):
             pass
     return result
-
-
 # ============================================================
 # ステージ分類
 # ============================================================
@@ -781,8 +672,6 @@ STAGE_CATEGORIES = [
     {"name": "🌙 夜叉ステージ", "pattern": lambda sid: str(sid).startswith("2900")},
     {"name": "❓ その他", "pattern": lambda sid: True},
 ]
-
-
 def categorize_stages(stage_ids: list) -> dict:
     result = {}
     assigned = set()
@@ -801,21 +690,15 @@ def categorize_stages(stage_ids: list) -> dict:
         if bucket:
             result[name] = bucket
     return result
-
-
 # ============================================================
 # 同時実行
 # ============================================================
 def get_running_count() -> int:
     loops = load_loops()
     return sum(1 for data in loops.values() if data.get("status") == "running")
-
-
 def can_start_loop() -> tuple:
     current = get_running_count()
     return current < MAX_CONCURRENT_LOOPS, current
-
-
 # ============================================================
 # 人魂
 # ============================================================
@@ -828,12 +711,8 @@ def get_hitodama_detail(client: Client) -> dict:
                 "recover_sec": int(data.get("hitodamaRecoverSec", 0))}
     except Exception:
         return {"paid": 999, "free": 0, "total": 999, "recover_sec": 0}
-
-
 def get_hitodama(client: Client) -> int:
     return get_hitodama_detail(client)["total"]
-
-
 def get_ymoney(client: Client) -> int:
     try:
         data = client.save.get("ywp_user_data", {})
@@ -842,28 +721,20 @@ def get_ymoney(client: Client) -> int:
         return int(data.get("ymoney", 0))
     except Exception:
         return 0
-
-
 def get_items(client: Client) -> dict:
     try:
         return parse_item_rows(client.save.get("ywp_user_item"))
     except Exception:
         return {}
-
-
 def get_ypoint(client: Client):
     items = get_items(client)
     if not items:
         return None
     return items.get(YPOINT_ITEM_ID, 0)
-
-
 def fmt_gain(value) -> str:
     if value is None:
         return "?"
     return f"{value:+,}" if value else "0"
-
-
 def event_point_name(client: Client) -> str:
     try:
         for e in (client.save.get("ywp_mst_event") or []):
@@ -875,8 +746,6 @@ def event_point_name(client: Client) -> str:
     except Exception:
         pass
     return "イベントP"
-
-
 class GainTracker:
     def __init__(self, client: Client):
         self.client = client
@@ -892,7 +761,6 @@ class GainTracker:
         self.last_money = None
         self.counted = 0
         self.live = None
-
     def _apply_items(self):
         items = get_items(self.client)
         if not items:
@@ -902,7 +770,6 @@ class GainTracker:
             if diff:
                 self.item_gain[iid] = self.item_gain.get(iid, 0) + diff
         self.items_prev = items
-
     async def after_battle(self, result, user_id=None):
         if not isinstance(result, dict):
             return
@@ -927,19 +794,16 @@ class GainTracker:
             if isinstance(v, (int, float)) and v:
                 setattr(self, attr, getattr(self, attr) + int(v))
         self._apply_items()
-
     async def refresh(self, batches=None):
         try:
             await asyncio.to_thread(self.client.login, self.client.userId)
         except Exception:
             return
         self._apply_items()
-
     def per_stage(self):
         if not self.counted:
             return None
         return self.money_gain / self.counted
-
     def to_dict(self):
         return {
             "money_gain": self.money_gain,
@@ -952,8 +816,6 @@ class GainTracker:
             "score_total": self.score_total,
             "item_gain": {str(k): v for k, v in self.item_gain.items() if v},
         }
-
-
 def dump_gameend_debug(result):
     try:
         if os.path.exists(DEBUG_GAMEEND_FILE):
@@ -969,13 +831,9 @@ def dump_gameend_debug(result):
         save_json(DEBUG_GAMEEND_FILE, info)
     except Exception:
         pass
-
-
 def apply_gain_to_loop(loop_data: dict, tracker):
     if tracker is not None:
         loop_data.update(tracker.to_dict())
-
-
 def gain_fields(embed: discord.Embed, data: dict, done: bool = False):
     buy_count = data.get("buy_count")
     if buy_count:
@@ -1018,8 +876,6 @@ def gain_fields(embed: discord.Embed, data: dict, done: bool = False):
             inline=False
         )
     return embed
-
-
 async def auto_buy_hitodama(client: Client, goods_id: int = None):
     candidates = [goods_id] if goods_id is not None else list(AUTO_BUY_GOODS_IDS)
     attempts = []
@@ -1057,8 +913,6 @@ async def auto_buy_hitodama(client: Client, goods_id: int = None):
     except Exception:
         pass
     return False, info
-
-
 async def try_auto_buy(client: Client, buy_count: int):
     if not AUTO_BUY_HITODAMA:
         return False, {"skipped": "自動購入が OFF"}, buy_count
@@ -1071,8 +925,6 @@ async def try_auto_buy(client: Client, buy_count: int):
     if ok:
         buy_count += 1
     return ok, info, buy_count
-
-
 def describe_buy_failure(info) -> str:
     if info and info.get("skipped"):
         return f"・購入を見送りました: {info['skipped']}"
@@ -1091,8 +943,6 @@ def describe_buy_failure(info) -> str:
             line += f"\n　{msg[:120]}"
         lines.append(line)
     return "\n".join(lines)
-
-
 # ============================================================
 # イベントID遷移
 # ============================================================
@@ -1104,8 +954,6 @@ def next_block_start(current_id: int) -> int:
     prefix = s[:-4]
     next_block = block + 1
     return int(f"{prefix}{next_block}001")
-
-
 # ============================================================
 # DM通知View
 # ============================================================
@@ -1121,7 +969,6 @@ class ResumeView(ui.View):
         self.request_delay = request_delay
         self.cooldown = cooldown
         self.end_at = end_at
-
     @ui.button(label="▶️ 周回再開", style=discord.ButtonStyle.success, emoji="▶️", custom_id="hitodama_resume:resume")
     async def resume(self, interaction: discord.Interaction, button: ui.Button):
         if interaction.user.id != self.user_id:
@@ -1162,7 +1009,6 @@ class ResumeView(ui.View):
             self.stage_id, self.count, self.current + 1,
             self.request_delay, self.cooldown, self.end_at
         ))
-
     @ui.button(label="🛑 完全停止", style=discord.ButtonStyle.danger, emoji="🛑", custom_id="hitodama_resume:stop")
     async def stop(self, interaction: discord.Interaction, button: ui.Button):
         if interaction.user.id != self.user_id:
@@ -1174,8 +1020,6 @@ class ResumeView(ui.View):
             del loops[self.loop_key]
             await save_loops_async(loops)
         await safe_reply(interaction, content="🛑 周回を完全停止しました。", ephemeral=True)
-
-
 # ============================================================
 # DM通知
 # ============================================================
@@ -1187,13 +1031,9 @@ async def send_locked_dm(bot, user_id, stage_id, player_name=None, streak=0):
     embed = discord.Embed(
         title="⛔ ステージに入れないため停止しました",
         description=(
-            f"**ステージ**: `{stage_id}`" + chr(10)
-            + f"**アカウント**: {player_name or '不明'}" + chr(10)
-            + f"**症状**: `rc=5`（条件未達）が {streak} 周連続" + chr(10) + chr(10)
-            + "【よくある原因】" + chr(10)
-            + "・**操作中の垢が違う**（👥 アカウント で切替）" + chr(10)
-            + "・そのステージの解放条件を満たしていない" + chr(10)
-            + "・イベントが終了している" + chr(10)
+            f"に連続 {streak} 回ステージ `{stage_id}` に入れませんでした。\n"
+            f"プレイヤー: `{player_name or '不明'}`\n"
+            f"しばらく時間をおいてから再開してください。"
         ),
         color=0xff4444,
         timestamp=datetime.now(JST)
@@ -1204,2283 +1044,826 @@ async def send_locked_dm(bot, user_id, stage_id, player_name=None, streak=0):
         pass
 
 
-async def send_hitodama_dm(bot, user_id, loop_key, stage_id, count, current,
-                           request_delay, cooldown, current_hitodama, end_at=None,
-                           buy_info=None):
+async def send_hitodama_pause_dm(bot, user_id, loop_key, stage_id, count, current,
+                                  request_delay, cooldown, end_at=None):
     try:
         user = await bot.fetch_user(user_id)
     except Exception:
         return
-    acc = get_active_account(user_id)
-    ymoney = "?"
-    detail = None
-    if acc:
-        try:
-            client = build_client_from_account(acc)
-            await asyncio.to_thread(client.login, acc["userId"])
-            ymoney = get_ymoney(client)
-            detail = get_hitodama_detail(client)
-        except Exception:
-            pass
-    if detail:
-        hitodama_line = f"{detail['total']}（購入分 {detail['paid']} / 無料 {detail['free']}）"
-    else:
-        hitodama_line = str(current_hitodama)
     embed = discord.Embed(
-        title="⚠️ 人魂自動購入失敗",
+        title="💤 人魂が不足したため一時停止",
         description=(
-            f"**現在の人魂**: {hitodama_line}\n"
-            f"**YM**: {ymoney}\n"
-            f"**ステージ**: `{stage_id}`\n"
-            f"**進捗**: {current} / {count if count < 999999 else '日時まで'}\n\n"
-            f"【サーバーの応答】\n{describe_buy_failure(buy_info)}\n\n"
-            f"【対応】\nぷにぷに側で人魂を補充して「▶️ 周回再開」を押してください"
+            f"ステージ: `{stage_id}`\n"
+            f"進捗: {current} / {count}\n"
+            f"人魂が補充されたら下のボタンから再開できます。"
         ),
-        color=0xff4444,
+        color=0xffaa00,
         timestamp=datetime.now(JST)
     )
     view = ResumeView(
-        user_id=user_id, loop_key=loop_key, stage_id=stage_id,
-        count=count, current=current,
-        request_delay=request_delay, cooldown=cooldown, end_at=end_at
+        user_id=user_id,
+        loop_key=loop_key,
+        stage_id=stage_id,
+        count=count,
+        current=current,
+        request_delay=request_delay,
+        cooldown=cooldown,
+        end_at=end_at
     )
     try:
         await user.send(embed=embed, view=view)
-    except discord.Forbidden:
-        pass
     except Exception:
         pass
-# ============================================================
-# モーダル：ログイン
-# ============================================================
-class LoginModal(ui.Modal, title="ぷにぷに ログイン"):
-    email_input = ui.TextInput(label="メールアドレス", placeholder="example@mail.com", required=True, max_length=200)
-    password_input = ui.TextInput(label="パスワード", placeholder="パスワードを入力", required=True, max_length=200)
 
-    async def on_submit(self, interaction: discord.Interaction):
-        if not await safe_defer(interaction):
-            return
-        await safe_reply(interaction, content="🔐 ログイン処理中...\n（検出した全垢を自動保存します／10〜30秒）", ephemeral=True)
-        email = self.email_input.value.strip()
-        password = self.password_input.value
+
+async def send_finish_dm(bot, user_id, stage_id, count, tracker_data=None):
+    try:
+        user = await bot.fetch_user(user_id)
+    except Exception:
+        return
+    embed = discord.Embed(
+        title="✅ 周回完了",
+        description=f"ステージ `{stage_id}` を {count} 回実行しました。",
+        color=0x00ff88,
+        timestamp=datetime.now(JST)
+    )
+    if tracker_data:
+        gain_fields(embed, tracker_data, done=True)
+    try:
+        await user.send(embed=embed)
+    except Exception:
+        pass
+
+
+# ============================================================
+# 周回メイン処理
+# ============================================================
+GAIN_DEBUG_DUMP = False
+
+
+async def run_farm(bot, interaction, ctx, user_id, stage_id, count,
+                    request_delay, cooldown, end_at=None,
+                    use_random_rd=True, use_random_cd=True, account_id=None):
+    loop_key = f"{user_id}_{stage_id}_{int(time.time())}"
+    loops = load_loops()
+    loops[loop_key] = {
+        "user_id": user_id,
+        "stage_id": stage_id,
+        "count": count,
+        "current": 0,
+        "status": "running",
+        "started_at": datetime.now(JST).isoformat(),
+        "account_id": account_id,
+        "buy_count": 0,
+        "errors": 0,
+        "locked_streak": 0,
+    }
+    await save_loops_async(loops)
+
+    slot_id = await assign_slot(loop_key, user_id, "farm", str(stage_id))
+    if slot_id is None:
+        loops = load_loops()
+        loops[loop_key]["status"] = "queued"
+        await save_loops_async(loops)
+        position = await add_to_queue(
+            user_id, "farm", str(stage_id),
+            {
+                "stage_id": stage_id,
+                "count": count,
+                "request_delay": request_delay,
+                "cooldown": cooldown,
+                "end_at": end_at,
+                "use_random_rd": use_random_rd,
+                "use_random_cd": use_random_cd,
+                "account_id": account_id,
+            }
+        )
+        if interaction:
+            await safe_reply(
+                interaction,
+                content=f"⏳ 空きがないため予約しました。順番は {position} 番目です。",
+                ephemeral=True
+            )
+        return
+
+    acc = get_session(user_id, account_id)
+    if not acc:
+        if interaction:
+            await safe_reply(interaction, content="❌ アカウントが見つかりません。", ephemeral=True)
+        await release_slot(slot_id)
+        return
+
+    client = build_client_from_account(acc)
+    try:
+        await asyncio.to_thread(client.login, acc["userId"])
+        update_account_tokens(user_id, client)
+    except Exception as e:
+        if interaction:
+            await safe_reply(interaction, content=f"❌ ログイン失敗: `{str(e)[:200]}`", ephemeral=True)
+        await release_slot(slot_id)
+        return
+
+    tracker = GainTracker(client)
+    current = 0
+    buy_count = 0
+    locked_streak = 0
+    errors = 0
+
+    if interaction:
+        await safe_reply(
+            interaction,
+            content=f"✅ 周回開始: `{stage_id}` / {count} 回",
+            ephemeral=False
+        )
+
+    while current < count:
+        loops = load_loops()
+        if loop_key not in loops or loops[loop_key]["status"] != "running":
+            break
+
+        if end_at and datetime.now(JST) >= end_at:
+            break
+
+        if ODD_HOUR_REST_ENABLED:
+            rested = await check_odd_hour_rest(loop_key)
+            if rested:
+                continue
+
+        hitodama = get_hitodama(client)
+        if hitodama < HITODAMA_THRESHOLD:
+            ok, info, buy_count = await try_auto_buy(client, buy_count)
+            if not ok:
+                loops = load_loops()
+                loops[loop_key]["status"] = "paused_hitodama"
+                loops[loop_key]["buy_count"] = buy_count
+                loops[loop_key]["hitodama"] = hitodama
+                await save_loops_async(loops)
+                await send_hitodama_pause_dm(
+                    bot, user_id, loop_key, stage_id, count, current,
+                    request_delay, cooldown, end_at
+                )
+                await release_slot(slot_id)
+                return
+
+        rd = rand_request_delay() if use_random_rd else request_delay
+        cd = rand_cooldown() if use_random_cd else cooldown
+
         try:
-            c = await asyncio.to_thread(login_email, email, password)
+            await asyncio.sleep(rd)
+            rc, result = await asyncio.to_thread(
+                client.call, "startStage.nhn", {"stageId": int(stage_id)}
+            )
+
+            if isinstance(result, dict):
+                rc_code = result.get("resultCode", rc)
+            else:
+                rc_code = rc
+
+            if rc_code in EVENT_SKIP_CODES:
+                locked_streak += 1
+                loops = load_loops()
+                loops[loop_key]["locked_streak"] = locked_streak
+                await save_loops_async(loops)
+                if locked_streak >= LOCKED_STAGE_LIMIT:
+                    loops = load_loops()
+                    loops[loop_key]["status"] = "locked"
+                    await save_loops_async(loops)
+                    await send_locked_dm(
+                        bot, user_id, stage_id,
+                        acc.get("player_name"), locked_streak
+                    )
+                    break
+                await asyncio.sleep(5)
+                continue
+
+            if rc_code in RETRY_CODES:
+                errors += 1
+                if errors >= MAX_CONSECUTIVE_ERRORS:
+                    loops = load_loops()
+                    loops[loop_key]["status"] = "error"
+                    await save_loops_async(loops)
+                    break
+                await asyncio.sleep(RETRY_WAITS[min(errors - 1, len(RETRY_WAITS) - 1)])
+                continue
+
+            errors = 0
+            locked_streak = 0
+
+            rc, game_result = await asyncio.to_thread(
+                client.call, "endStage.nhn", {}
+            )
+            await tracker.after_battle(game_result, user_id)
+            current += 1
+
+            loops = load_loops()
+            loops[loop_key]["current"] = current
+            loops[loop_key]["buy_count"] = buy_count
+            apply_gain_to_loop(loops[loop_key], tracker)
+            await save_loops_async(loops)
+
+            if current >= count:
+                loops = load_loops()
+                loops[loop_key]["status"] = "done"
+                await save_loops_async(loops)
+                await tracker.refresh()
+                await send_finish_dm(bot, user_id, stage_id, count, tracker.to_dict())
+                break
+
+            await asyncio.sleep(cd)
+
         except Exception as e:
-            return await safe_reply(interaction, content=f"❌ ログイン失敗: `{str(e)[:300]}`", ephemeral=True)
-        info = c.info()
-        player_name = info.get("playerName", "不明")
-        await add_account(interaction.user.id, c, player_name)
-        self.password_input = None
-        accounts = get_user_accounts(interaction.user.id)
-        embed = discord.Embed(title="✅ ログイン成功", color=0x00ff88, timestamp=datetime.now(JST))
-        embed.add_field(name="👤 プレイヤー名", value=player_name, inline=True)
-        embed.add_field(name="🆔 ユーザーID", value=str(c.userId), inline=True)
-        embed.add_field(name="👥 登録済み", value=f"{len(accounts)} 垢（この垢を選択中）", inline=True)
-        await safe_reply(interaction, embed=embed, ephemeral=True)
+            errors += 1
+            if errors >= MAX_CONSECUTIVE_ERRORS:
+                loops = load_loops()
+                loops[loop_key]["status"] = "fatal"
+                loops[loop_key]["error"] = str(e)[:200]
+                await save_loops_async(loops)
+                break
+            await asyncio.sleep(2)
+            continue
+
+    await release_slot(slot_id)
+    await cleanup_user_loops(user_id)
 
 
-# ============================================================
-# モーダル：周回開始
-# ============================================================
-class FarmModal(ui.Modal, title="ぷにぷに 自動周回"):
-    stage_input = ui.TextInput(label="ステージID", placeholder="例: 1001001", required=True, max_length=20)
-    count_input = ui.TextInput(label="周回回数（任意）", placeholder="日時指定なら空欄OK", required=False, max_length=6)
-    end_at_input = ui.TextInput(label="終了日時（任意）", placeholder="例: 2026-09-20 21:00", required=False, max_length=20)
-    request_delay_input = ui.TextInput(label="リクエスト前待機(秒)", placeholder="空欄=4.5〜6.0ランダム", default="", required=False, max_length=10)
-    cooldown_input = ui.TextInput(label="クールダウン(秒)", placeholder="空欄=4.5〜6.0ランダム", default="", required=False, max_length=10)
+async def run_farm_dm(bot, interaction, user_id, stage_id, count, start_from,
+                      request_delay, cooldown, end_at=None, account_id=None):
+    acc = get_session(user_id, account_id)
+    if not acc:
+        await safe_reply(interaction, content="❌ アカウントが見つかりません。", ephemeral=True)
+        return
 
-    async def on_submit(self, interaction: discord.Interaction):
-        if not await safe_defer(interaction):
-            return
-        await cleanup_user_loops(interaction.user.id)
+    client = build_client_from_account(acc)
+    try:
+        await asyncio.to_thread(client.login, acc["userId"])
+        update_account_tokens(user_id, client)
+    except Exception as e:
+        await safe_reply(interaction, content=f"❌ ログイン失敗: `{str(e)[:200]}`", ephemeral=True)
+        return
 
-        acc = get_active_account(interaction.user.id)
-        if not acc:
-            return await safe_reply(interaction, content="❌ ログインしていません。", ephemeral=True)
+    tracker = GainTracker(client)
+    current = start_from - 1
+    buy_count = 0
+    locked_streak = 0
+    errors = 0
+    loop_key = None
+
+    while current < count:
+        if end_at and datetime.now(JST) >= end_at:
+            break
+
+        hitodama = get_hitodama(client)
+        if hitodama < HITODAMA_THRESHOLD:
+            ok, info, buy_count = await try_auto_buy(client, buy_count)
+            if not ok:
+                break
+
+        rd = rand_request_delay()
+        cd = rand_cooldown()
 
         try:
-            stage_id = int(self.stage_input.value.strip())
-        except ValueError:
-            return await safe_reply(interaction, content="❌ ステージIDが不正です。", ephemeral=True)
+            await asyncio.sleep(rd)
+            rc, result = await asyncio.to_thread(
+                client.call, "startStage.nhn", {"stageId": int(stage_id)}
+            )
+            rc_code = result.get("resultCode", rc) if isinstance(result, dict) else rc
 
-        count = None
-        raw_count = self.count_input.value.strip() if self.count_input.value else ""
-        if raw_count:
+            if rc_code in EVENT_SKIP_CODES:
+                locked_streak += 1
+                if locked_streak >= LOCKED_STAGE_LIMIT:
+                    break
+                await asyncio.sleep(5)
+                continue
+
+            if rc_code in RETRY_CODES:
+                errors += 1
+                if errors >= MAX_CONSECUTIVE_ERRORS:
+                    break
+                await asyncio.sleep(RETRY_WAITS[min(errors - 1, len(RETRY_WAITS) - 1)])
+                continue
+
+            errors = 0
+            locked_streak = 0
+
+            rc, game_result = await asyncio.to_thread(client.call, "endStage.nhn", {})
+            await tracker.after_battle(game_result, user_id)
+            current += 1
+
+            if current >= count:
+                await tracker.refresh()
+                await send_finish_dm(bot, user_id, stage_id, count, tracker.to_dict())
+                break
+
+            await asyncio.sleep(cd)
+
+        except Exception as e:
+            errors += 1
+            if errors >= MAX_CONSECUTIVE_ERRORS:
+                break
+            await asyncio.sleep(2)
+            continue
+
+
+async def run_progress(bot, interaction, ctx, user_id, start_id, end_id,
+                       end_at=None, account_id=None):
+    acc = get_session(user_id, account_id)
+    if not acc:
+        if interaction:
+            await safe_reply(interaction, content="❌ アカウントが見つかりません。", ephemeral=True)
+        return
+
+    client = build_client_from_account(acc)
+    try:
+        await asyncio.to_thread(client.login, acc["userId"])
+        update_account_tokens(user_id, client)
+    except Exception as e:
+        if interaction:
+            await safe_reply(interaction, content=f"❌ ログイン失敗: `{str(e)[:200]}`", ephemeral=True)
+        return
+
+    if interaction:
+        await safe_reply(
+            interaction,
+            content=f"✅ 進行開始: `{start_id}` ～ `{end_id}`",
+            ephemeral=False
+        )
+
+    tracker = GainTracker(client)
+    success = 0
+    failed = 0
+
+    for sid in range(int(start_id), int(end_id) + 1):
+        if end_at and datetime.now(JST) >= end_at:
+            break
+
+        hitodama = get_hitodama(client)
+        if hitodama < HITODAMA_THRESHOLD:
+            ok, _, _ = await try_auto_buy(client, 0)
+            if not ok:
+                break
+
+        try:
+            await asyncio.sleep(rand_request_delay())
+            rc, result = await asyncio.to_thread(
+                client.call, "startStage.nhn", {"stageId": sid}
+            )
+            rc_code = result.get("resultCode", rc) if isinstance(result, dict) else rc
+
+            if rc_code in EVENT_SKIP_CODES:
+                failed += 1
+                await asyncio.sleep(3)
+                continue
+
+            rc, game_result = await asyncio.to_thread(client.call, "endStage.nhn", {})
+            await tracker.after_battle(game_result, user_id)
+            success += 1
+
+            await asyncio.sleep(rand_cooldown())
+
+        except Exception:
+            failed += 1
+            await asyncio.sleep(2)
+            continue
+
+    await tracker.refresh()
+    embed = discord.Embed(
+        title="✅ 進行完了",
+        description=f"成功: {success} / 失敗: {failed}",
+        color=0x00ff88
+    )
+    gain_fields(embed, tracker.to_dict(), done=True)
+    if interaction:
+        await safe_reply(interaction, embed=embed, ephemeral=False)
+
+
+async def run_event_progress(bot, interaction, ctx, user_id, start_id,
+                             end_at=None, account_id=None):
+    acc = get_session(user_id, account_id)
+    if not acc:
+        if interaction:
+            await safe_reply(interaction, content="❌ アカウントが見つかりません。", ephemeral=True)
+        return
+
+    client = build_client_from_account(acc)
+    try:
+        await asyncio.to_thread(client.login, acc["userId"])
+        update_account_tokens(user_id, client)
+    except Exception as e:
+        if interaction:
+            await safe_reply(interaction, content=f"❌ ログイン失敗: `{str(e)[:200]}`", ephemeral=True)
+        return
+
+    if interaction:
+        await safe_reply(
+            interaction,
+            content=f"✅ イベント進行開始: `{start_id}` 以降",
+            ephemeral=False
+        )
+
+    tracker = GainTracker(client)
+    current_id = int(start_id)
+    success = 0
+    failed = 0
+    consecutive_fail = 0
+
+    while consecutive_fail < 5:
+        if end_at and datetime.now(JST) >= end_at:
+            break
+
+        hitodama = get_hitodama(client)
+        if hitodama < HITODAMA_THRESHOLD:
+            ok, _, _ = await try_auto_buy(client, 0)
+            if not ok:
+                break
+
+        try:
+            await asyncio.sleep(rand_request_delay())
+            rc, result = await asyncio.to_thread(
+                client.call, "startStage.nhn", {"stageId": current_id}
+            )
+            rc_code = result.get("resultCode", rc) if isinstance(result, dict) else rc
+
+            if rc_code in EVENT_SKIP_CODES:
+                failed += 1
+                consecutive_fail += 1
+                current_id = next_block_start(current_id)
+                await asyncio.sleep(3)
+                continue
+
+            consecutive_fail = 0
+            rc, game_result = await asyncio.to_thread(client.call, "endStage.nhn", {})
+            await tracker.after_battle(game_result, user_id)
+            success += 1
+            current_id += 1
+
+            await asyncio.sleep(rand_cooldown())
+
+        except Exception:
+            failed += 1
+            consecutive_fail += 1
+            current_id = next_block_start(current_id)
+            await asyncio.sleep(2)
+            continue
+
+    await tracker.refresh()
+    embed = discord.Embed(
+        title="✅ イベント進行完了",
+        description=f"最後に到達したID: `{current_id}`\n成功: {success} / 失敗: {failed}",
+        color=0x00ff88
+    )
+    gain_fields(embed, tracker.to_dict(), done=True)
+    if interaction:
+        await safe_reply(interaction, embed=embed, ephemeral=False)
+
+
+async def run_benchmark(bot, interaction, ctx, user_id, stage_ids, samples, account_id=None):
+    acc = get_session(user_id, account_id)
+    if not acc:
+        if interaction:
+            await safe_reply(interaction, content="❌ アカウントが見つかりません。", ephemeral=True)
+        return
+
+    client = build_client_from_account(acc)
+    try:
+        await asyncio.to_thread(client.login, acc["userId"])
+        update_account_tokens(user_id, client)
+    except Exception as e:
+        if interaction:
+            await safe_reply(interaction, content=f"❌ ログイン失敗: `{str(e)[:200]}`", ephemeral=True)
+        return
+
+    if interaction:
+        await safe_reply(
+            interaction,
+            content=f"✅ ベンチマーク開始: {len(stage_ids)}ステージ × {samples}回",
+            ephemeral=False
+        )
+
+    results = {}
+    for sid in stage_ids:
+        sid = int(sid)
+        tracker = GainTracker(client)
+        ok_count = 0
+        for _ in range(samples):
+            hitodama = get_hitodama(client)
+            if hitodama < HITODAMA_THRESHOLD:
+                ok, _, _ = await try_auto_buy(client, 0)
+                if not ok:
+                    break
+
             try:
-                count = int(raw_count)
-                if count < 1 or count > 999999:
-                    raise ValueError
-            except ValueError:
-                return await safe_reply(interaction, content="❌ 回数は 1〜999999 の整数で指定してください。", ephemeral=True)
+                await asyncio.sleep(rand_request_delay())
+                rc, result = await asyncio.to_thread(
+                    client.call, "startStage.nhn", {"stageId": sid}
+                )
+                rc_code = result.get("resultCode", rc) if isinstance(result, dict) else rc
+                if rc_code in EVENT_SKIP_CODES:
+                    continue
 
-        end_at = None
-        end_at_str = ""
-        raw_end = self.end_at_input.value.strip() if self.end_at_input.value else ""
-        if raw_end:
-            end_at = parse_datetime(raw_end)
-            if end_at is None:
-                return await safe_reply(interaction, content="❌ 終了日時の形式が不正です。\n**形式**: `YYYY-MM-DD HH:MM`", ephemeral=True)
-            if end_at.timestamp() <= time.time():
-                return await safe_reply(interaction, content="❌ 終了日時は未来の時刻を指定してください。", ephemeral=True)
-            end_at_str = end_at.strftime("%Y-%m-%d %H:%M")
+                rc, game_result = await asyncio.to_thread(client.call, "endStage.nhn", {})
+                await tracker.after_battle(game_result, user_id)
+                ok_count += 1
+                await asyncio.sleep(rand_cooldown())
+            except Exception:
+                continue
 
-        if count is None and end_at is None:
-            return await safe_reply(interaction, content="❌ **「周回回数」or「終了日時」のどちらか一方を入力してください。**", ephemeral=True)
-        if count is None:
-            count = 999999
+        if ok_count > 0:
+            data = tracker.to_dict()
+            data["ok_count"] = ok_count
+            data["avg_money"] = data["money_gain"] / ok_count
+            results[sid] = data
 
-        rd_raw = self.request_delay_input.value.strip() if self.request_delay_input.value else ""
-        if rd_raw:
-            try:
-                request_delay = float(rd_raw)
-                if request_delay < 0 or request_delay > 60:
-                    raise ValueError
-                use_random_rd = False
-            except ValueError:
-                return await safe_reply(interaction, content="❌ リクエスト前待機は 0〜60 秒で指定してください。", ephemeral=True)
+    embed = discord.Embed(title="📊 ベンチマーク結果", color=0x00aaff)
+    for sid, res in sorted(results.items()):
+        embed.add_field(
+            name=f"`{sid}`",
+            value=(
+                f"平均マネー: {res['avg_money']:,.1f}\n"
+                f"合計: {res['money_gain']:,} / {res['ok_count']}回"
+            ),
+            inline=True
+        )
+
+    if interaction:
+        await safe_reply(interaction, embed=embed, ephemeral=False)
+
+
+# ============================================================
+# パネル
+# ============================================================
+class PanelView(ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    @ui.button(label="📋 状態更新", style=discord.ButtonStyle.secondary, custom_id="panel:refresh")
+    async def refresh(self, interaction: discord.Interaction, button: ui.Button):
+        if not await safe_defer(interaction):
+            return
+        await safe_edit_original(interaction, embed=build_panel_embed())
+
+    @ui.button(label="⏹️ 自分のジョブ停止", style=discord.ButtonStyle.danger, custom_id="panel:stop_mine")
+    async def stop_mine(self, interaction: discord.Interaction, button: ui.Button):
+        if not await safe_defer(interaction, ephemeral=True):
+            return
+        loops = load_loops()
+        deleted = 0
+        for k, v in list(loops.items()):
+            if v.get("user_id") == interaction.user.id and v.get("status") == "running":
+                del loops[k]
+                deleted += 1
+        await save_loops_async(loops)
+        rem = await remove_user_from_queue(interaction.user.id)
+        await safe_reply(
+            interaction,
+            content=f"🛑 実行中 {deleted}件 / 予約 {rem}件 を停止しました。",
+            ephemeral=True
+        )
+        await update_panel_on_change()
+
+
+def build_panel_embed() -> discord.Embed:
+    slots = load_slots()["slots"]
+    q_total = queue_status()["total"]
+    running = paused = free = 0
+    slot_lines = []
+    for i in range(MAX_SLOTS):
+        s = slots.get(str(i))
+        if not s:
+            free += 1
+            slot_lines.append(f"#{i}: ✅ 空き")
+        elif s.get("status") == "running":
+            running += 1
+            slot_lines.append(f"#{i}: ▶️ `{s.get('stage_info', '?')}` — <@{s.get('user_id')}>")
+        elif s.get("status") == "paused_hitodama":
+            paused += 1
+            slot_lines.append(f"#{i}: 💤 `{s.get('stage_info', '?')}` — <@{s.get('user_id')}>")
         else:
-            request_delay = 0
-            use_random_rd = True
+            slot_lines.append(f"#{i}: ⏸️ その他")
 
-        cd_raw = self.cooldown_input.value.strip() if self.cooldown_input.value else ""
-        if cd_raw:
-            try:
-                cooldown = float(cd_raw)
-                if cooldown < 0 or cooldown > 60:
-                    raise ValueError
-                use_random_cd = False
-            except ValueError:
-                return await safe_reply(interaction, content="❌ クールダウンは 0〜60 秒で指定してください。", ephemeral=True)
-        else:
-            cooldown = 0
-            use_random_cd = True
+    embed = discord.Embed(
+        title="🏃 周回状態パネル",
+        description=(
+            f"**実行中**: {running} / **一時停止**: {paused} / **空き**: {free}\n"
+            f"**予約キュー**: {q_total} 件"
+        ),
+        color=0x00ffaa,
+        timestamp=datetime.now(JST)
+    )
+    embed.add_field(
+        name="スロット一覧",
+        value="\n".join(slot_lines) or "データなし",
+        inline=False
+    )
+    return embed
 
+
+# ============================================================
+# コマンド定義
+# ============================================================
+async def setup_commands(bot):
+    @bot.tree.command(name="panel", description="周回状態パネルを表示")
+    @app_commands.checks.has_permissions(administrator=True)
+    async def cmd_panel(interaction: discord.Interaction):
+        if not await safe_defer(interaction):
+            return
+        embed = build_panel_embed()
+        view = PanelView()
+        msg = await interaction.followup.send(embed=embed, view=view)
+        panel = load_panel()
+        panel[str(interaction.guild_id)] = {
+            "channel_id": interaction.channel_id,
+            "message_id": msg.id,
+        }
+        save_panel(panel)
+
+    @bot.tree.command(name="farm", description="指定ステージを周回")
+    @app_commands.describe(
+        stage_id="ステージID（例: 100101）",
+        count="回数",
+        request_delay="リクエスト間隔（秒）",
+        cooldown="戦闘間隔（秒）",
+        end_at="終了時刻（YYYY-MM-DD HH:MM）",
+        account_id="使用するアカウントID",
+    )
+    async def cmd_farm(
+        interaction: discord.Interaction,
+        stage_id: str,
+        count: app_commands.Range[int, 1, 99999] = 100,
+        request_delay: float = 2.5,
+        cooldown: float = 3.0,
+        end_at: str | None = None,
+        account_id: str | None = None,
+    ):
+        if not await safe_defer(interaction):
+            return
+        end_dt = parse_datetime(end_at) if end_at else None
         ok, current = can_start_loop()
         if not ok:
-            return await safe_reply(interaction, content=f"❌ **同時実行上限に達しています** ({current}/{MAX_CONCURRENT_LOOPS})", ephemeral=True)
-
-        active_id = get_active_id(interaction.user.id)
-        if account_busy(active_id):
-            sd_busy = get_session(interaction.user.id, active_id)
-            return await safe_reply(
+            await safe_reply(
                 interaction,
-                content=(f"❌ **{(sd_busy or {}).get('player_name', '不明')}** は既に周回中です。"
-                         + chr(10) + "別の垢で回すなら 👥 アカウント で切り替えてください。"),
-                ephemeral=True)
-
-        slot_id = find_free_slot()
-        if slot_id is None:
-            # ★ 予約キューに追加
+                content=f"⏳ 同時実行上限 {MAX_CONCURRENT_LOOPS} に達しています。予約キューに追加します。",
+                ephemeral=True
+            )
             position = await add_to_queue(
-                interaction.user.id, "farm", f"stage {stage_id}",
+                interaction.user.id, "farm", stage_id,
                 {
                     "stage_id": stage_id,
                     "count": count,
                     "request_delay": request_delay,
                     "cooldown": cooldown,
-                    "end_at": end_at.timestamp() if end_at else None,
-                    "use_random_rd": use_random_rd,
-                    "use_random_cd": use_random_cd,
-                    "account_id": active_id,
+                    "end_at": end_dt,
+                    "account_id": account_id,
                 }
             )
-            slot_stat = get_slot_status()
-            return await safe_reply(
-                interaction,
-                content=(
-                    f"📋 **予約に追加しました**（{position}番目）" + chr(10)
-                    + f"**垢**: {acc.get('player_name', '不明')}" + chr(10)
-                    + f"**ステージ**: `{stage_id}`" + chr(10)
-                    + f"**現在**: {slot_stat['running']}実行中 / {slot_stat['paused']}停止中 / {slot_stat['free']}空き" + chr(10)
-                    + f"※ スロットが空いたら自動で実行します"
-                ),
-                ephemeral=True
-            )
-
-        count_str = f"{count}回" if count < 999999 else "日時まで"
-        end_str = end_at_str if end_at_str else "なし"
-
-        desc = (
-            f"**垢**: {acc.get('player_name', '不明')} (`{acc.get('player_id')}`)\n"
-            f"**ステージ**: `{stage_id}`\n"
-            f"**回数**: {count_str}\n"
-            f"**終了日時**: {end_str}\n"
-            f"**スロット**: `{slot_id}` に割り当て"
-        )
-        embed = discord.Embed(title="🚀 周回を開始します", description=desc, color=0x5865F2)
-        await safe_reply(interaction, embed=embed, ephemeral=True)
+            await safe_reply(interaction, content=f"✅ 予約完了: {position} 番目", ephemeral=True)
+            return
 
         asyncio.create_task(run_farm(
-            interaction.client, interaction, interaction.guild_id, interaction.user.id,
-            stage_id, count, request_delay, cooldown,
-            end_at.timestamp() if end_at else None,
-            use_random_rd, use_random_cd, active_id
+            bot, interaction, None, interaction.user.id,
+            stage_id, count, request_delay, cooldown, end_dt,
+            account_id=account_id
         ))
 
-
-# ============================================================
-# モーダル：ステージ進行
-# ============================================================
-class ProgressModal(ui.Modal, title="ステージ進行"):
-    start_input = ui.TextInput(label="開始ステージID", placeholder="例: 1001001", required=True, max_length=20)
-    end_input = ui.TextInput(label="終了ステージID", placeholder="例: 1001100", required=True, max_length=20)
-    end_at_input = ui.TextInput(label="終了日時（任意）", placeholder="例: 2026-09-20 21:00", required=False, max_length=20)
-
-    async def on_submit(self, interaction: discord.Interaction):
+    @bot.tree.command(name="progress", description="ID範囲を進行")
+    @app_commands.describe(
+        start_id="開始ID",
+        end_id="終了ID",
+        account_id="アカウントID",
+    )
+    async def cmd_progress(
+        interaction: discord.Interaction,
+        start_id: str,
+        end_id: str,
+        account_id: str | None = None,
+    ):
         if not await safe_defer(interaction):
             return
-        await cleanup_user_loops(interaction.user.id)
-
-        acc = get_active_account(interaction.user.id)
-        if not acc:
-            return await safe_reply(interaction, content="❌ ログインしていません。", ephemeral=True)
-
-        try:
-            start_id = int(self.start_input.value.strip())
-        except ValueError:
-            return await safe_reply(interaction, content="❌ 開始ステージIDが不正です。", ephemeral=True)
-        try:
-            end_id = int(self.end_input.value.strip())
-        except ValueError:
-            return await safe_reply(interaction, content="❌ 終了ステージIDが不正です。", ephemeral=True)
-
-        if end_id < start_id:
-            return await safe_reply(interaction, content="❌ 終了IDは開始ID以上にしてください。", ephemeral=True)
-        if end_id - start_id > 1000:
-            return await safe_reply(interaction, content="❌ 範囲が広すぎます（最大1000ステージ）", ephemeral=True)
-
-        end_at = None
-        end_at_str = ""
-        raw_end = self.end_at_input.value.strip() if self.end_at_input.value else ""
-        if raw_end:
-            end_at = parse_datetime(raw_end)
-            if end_at is None:
-                return await safe_reply(interaction, content="❌ 終了日時の形式が不正です。", ephemeral=True)
-            if end_at.timestamp() <= time.time():
-                return await safe_reply(interaction, content="❌ 終了日時は未来の時刻を指定してください。", ephemeral=True)
-            end_at_str = end_at.strftime("%Y-%m-%d %H:%M")
-
-        ok, current = can_start_loop()
-        if not ok:
-            return await safe_reply(interaction, content=f"❌ **同時実行上限** ({current}/{MAX_CONCURRENT_LOOPS})", ephemeral=True)
-
-        active_id = get_active_id(interaction.user.id)
-        if account_busy(active_id):
-            sd_busy = get_session(interaction.user.id, active_id)
-            return await safe_reply(
-                interaction,
-                content=(f"❌ **{(sd_busy or {}).get('player_name', '不明')}** は既に周回中です。"),
-                ephemeral=True)
-
-        slot_id = find_free_slot()
-        if slot_id is None:
-            position = await add_to_queue(
-                interaction.user.id, "progress", f"{start_id}〜{end_id}",
-                {
-                    "start_id": start_id,
-                    "end_id": end_id,
-                    "end_at": end_at.timestamp() if end_at else None,
-                    "account_id": active_id,
-                }
-            )
-            slot_stat = get_slot_status()
-            return await safe_reply(
-                interaction,
-                content=(
-                    f"📋 **予約に追加しました**（{position}番目）" + chr(10)
-                    + f"**垢**: {acc.get('player_name', '不明')}" + chr(10)
-                    + f"**範囲**: `{start_id}`〜`{end_id}`" + chr(10)
-                    + f"**現在**: {slot_stat['running']}実行中 / {slot_stat['paused']}停止中 / {slot_stat['free']}空き"
-                ),
-                ephemeral=True
-            )
-
-        desc = (
-            f"**垢**: {acc.get('player_name', '不明')} (`{acc.get('player_id')}`)\n"
-            f"**開始**: `{start_id}`\n"
-            f"**終了**: `{end_id}`\n"
-            f"**終了日時**: {end_at_str if end_at_str else 'なし'}\n"
-            f"**スロット**: `{slot_id}` に割り当て"
-        )
-        embed = discord.Embed(title="🎯 ステージ進行を開始します", description=desc, color=0x5865F2)
-        await safe_reply(interaction, embed=embed, ephemeral=True)
         asyncio.create_task(run_progress(
-            interaction.client, interaction, interaction.guild_id, interaction.user.id,
-            start_id, end_id,
-            end_at.timestamp() if end_at else None, active_id
+            bot, interaction, None, interaction.user.id,
+            start_id, end_id, account_id=account_id
         ))
 
-
-# ============================================================
-# モーダル：イベント自動進行
-# ============================================================
-class EventProgressModal(ui.Modal, title="イベント自動進行"):
-    start_input = ui.TextInput(label="開始ID", placeholder="例: 29701001", required=True, max_length=20)
-    end_at_input = ui.TextInput(label="終了日時（任意）", placeholder="例: 2026-09-20 21:00", required=False, max_length=20)
-
-    async def on_submit(self, interaction: discord.Interaction):
+    @bot.tree.command(name="event", description="イベント自動進行")
+    @app_commands.describe(
+        start_id="開始ID",
+        account_id="アカウントID",
+    )
+    async def cmd_event(
+        interaction: discord.Interaction,
+        start_id: str,
+        account_id: str | None = None,
+    ):
         if not await safe_defer(interaction):
             return
-        await cleanup_user_loops(interaction.user.id)
-
-        acc = get_active_account(interaction.user.id)
-        if not acc:
-            return await safe_reply(interaction, content="❌ ログインしていません。", ephemeral=True)
-
-        try:
-            start_id = int(self.start_input.value.strip())
-        except ValueError:
-            return await safe_reply(interaction, content="❌ 開始IDが不正です。", ephemeral=True)
-
-        end_at = None
-        end_at_str = ""
-        raw_end = self.end_at_input.value.strip() if self.end_at_input.value else ""
-        if raw_end:
-            end_at = parse_datetime(raw_end)
-            if end_at is None:
-                return await safe_reply(interaction, content="❌ 終了日時の形式が不正です。", ephemeral=True)
-            if end_at.timestamp() <= time.time():
-                return await safe_reply(interaction, content="❌ 終了日時は未来の時刻を指定してください。", ephemeral=True)
-            end_at_str = end_at.strftime("%Y-%m-%d %H:%M")
-
-        ok, current = can_start_loop()
-        if not ok:
-            return await safe_reply(interaction, content=f"❌ **同時実行上限** ({current}/{MAX_CONCURRENT_LOOPS})", ephemeral=True)
-
-        active_id = get_active_id(interaction.user.id)
-        if account_busy(active_id):
-            sd_busy = get_session(interaction.user.id, active_id)
-            return await safe_reply(
-                interaction,
-                content=(f"❌ **{(sd_busy or {}).get('player_name', '不明')}** は既に周回中です。"),
-                ephemeral=True)
-
-        slot_id = find_free_slot()
-        if slot_id is None:
-            position = await add_to_queue(
-                interaction.user.id, "event", f"start {start_id}",
-                {
-                    "start_id": start_id,
-                    "end_at": end_at.timestamp() if end_at else None,
-                    "account_id": active_id,
-                }
-            )
-            slot_stat = get_slot_status()
-            return await safe_reply(
-                interaction,
-                content=(
-                    f"📋 **予約に追加しました**（{position}番目）" + chr(10)
-                    + f"**垢**: {acc.get('player_name', '不明')}" + chr(10)
-                    + f"**開始ID**: `{start_id}`" + chr(10)
-                    + f"**現在**: {slot_stat['running']}実行中 / {slot_stat['paused']}停止中 / {slot_stat['free']}空き"
-                ),
-                ephemeral=True
-            )
-
-        desc = (
-            f"**垢**: {acc.get('player_name', '不明')} (`{acc.get('player_id')}`)\n"
-            f"**開始ID**: `{start_id}`\n"
-            f"**終了日時**: {end_at_str if end_at_str else 'なし'}\n"
-            f"**動作**: rc=100/1303 で次ブロック001へジャンプ\n"
-            f"**スロット**: `{slot_id}` に割り当て"
-        )
-        embed = discord.Embed(title="🎪 イベント自動進行を開始します", description=desc, color=0xE67E22)
-        await safe_reply(interaction, embed=embed, ephemeral=True)
         asyncio.create_task(run_event_progress(
-            interaction.client, interaction, interaction.guild_id, interaction.user.id,
-            start_id, end_at.timestamp() if end_at else None, active_id
+            bot, interaction, None, interaction.user.id,
+            start_id, account_id=account_id
         ))
 
-
-# ============================================================
-# モーダル：効率計測
-# ============================================================
-class BenchmarkModal(ui.Modal, title="効率計測"):
-    stages_input = ui.TextInput(
-        label="ステージID（複数可）",
-        placeholder="例: 1001015 1001020 / 1001015-1001018",
-        required=True, max_length=200
-    )
-    samples_input = ui.TextInput(
-        label="1ステージあたりの回数",
-        placeholder=f"1〜{BENCH_MAX_SAMPLES}（既定 3）",
-        default="3", required=False, max_length=3
-    )
-
-    async def on_submit(self, interaction: discord.Interaction):
-        if not await safe_defer(interaction):
+    @bot.tree.command(name="accounts", description="登録済みアカウント一覧")
+    async def cmd_accounts(interaction: discord.Interaction):
+        if not await safe_defer(interaction, ephemeral=True):
             return
-        await cleanup_user_loops(interaction.user.id)
-
-        acc = get_active_account(interaction.user.id)
-        if not acc:
-            return await safe_reply(interaction, content="❌ ログインしていません。", ephemeral=True)
-
-        try:
-            stage_ids = parse_stage_list(self.stages_input.value)
-        except ValueError as e:
-            return await safe_reply(interaction, content=f"❌ ステージIDが不正です（{e}）", ephemeral=True)
-        if not stage_ids:
-            return await safe_reply(interaction, content="❌ ステージIDを入力してください。", ephemeral=True)
-        if len(stage_ids) > BENCH_MAX_STAGES:
-            return await safe_reply(interaction, content=f"❌ ステージが多すぎます（最大{BENCH_MAX_STAGES}件）", ephemeral=True)
-
-        raw = (self.samples_input.value or "3").strip()
-        try:
-            samples = int(raw) if raw else 3
-        except ValueError:
-            return await safe_reply(interaction, content="❌ 回数は数字で入力してください。", ephemeral=True)
-        if not (1 <= samples <= BENCH_MAX_SAMPLES):
-            return await safe_reply(interaction, content=f"❌ 回数は1〜{BENCH_MAX_SAMPLES}にしてください。", ephemeral=True)
-
-        ok, current = can_start_loop()
-        if not ok:
-            return await safe_reply(interaction, content=f"❌ **同時実行上限** ({current}/{MAX_CONCURRENT_LOOPS})", ephemeral=True)
-
-        active_id = get_active_id(interaction.user.id)
-        if account_busy(active_id):
-            sd_busy = get_session(interaction.user.id, active_id)
-            return await safe_reply(
-                interaction,
-                content=(f"❌ **{(sd_busy or {}).get('player_name', '不明')}** は既に周回中です。"),
-                ephemeral=True)
-
-        slot_id = find_free_slot()
-        if slot_id is None:
-            position = await add_to_queue(
-                interaction.user.id, "bench", f"{len(stage_ids)}st x {samples}",
-                {
-                    "stage_ids": stage_ids,
-                    "samples": samples,
-                    "account_id": active_id,
-                }
-            )
-            slot_stat = get_slot_status()
-            return await safe_reply(
-                interaction,
-                content=(
-                    f"📋 **予約に追加しました**（{position}番目）" + chr(10)
-                    + f"**垢**: {acc.get('player_name', '不明')}" + chr(10)
-                    + f"**ステージ数**: {len(stage_ids)} / 各 {samples} 回" + chr(10)
-                    + f"**現在**: {slot_stat['running']}実行中 / {slot_stat['paused']}停止中 / {slot_stat['free']}空き"
-                ),
-                ephemeral=True
-            )
-
-        total = len(stage_ids) * samples
-        embed = discord.Embed(
-            title="📐 効率計測を開始します",
-            description=(
-                f"**ステージ**: {' '.join(f'`{s}`' for s in stage_ids)}\n"
-                f"**回数**: 各 {samples} 回（合計 {total} 周）\n"
-                f"**スロット**: `{slot_id}` に割り当て"
-            ),
-            color=0x1ABC9C
-        )
-        await safe_reply(interaction, embed=embed, ephemeral=True)
-        asyncio.create_task(run_benchmark(
-            interaction.client, interaction, interaction.guild_id,
-            interaction.user.id, stage_ids, samples, active_id
-        ))
-
-
-# ============================================================
-# 周回タスク
-# ============================================================
-async def run_farm(bot, interaction, guild_id, user_id, stage_id, count,
-                   request_delay, cooldown, end_at=None,
-                   use_random_rd=True, use_random_cd=True, account_id=None):
-    loop_key = f"{user_id}_{stage_id}_{int(time.time())}"
-
-    slot_id = await assign_slot(loop_key, user_id, "farm", f"stage {stage_id}")
-    if slot_id is None:
-        # 予約から呼ばれた場合は既に空きがないのでリターン
-        await safe_reply(interaction, content=f"❌ **全スロット使用中**", ephemeral=True)
-        return
-    print(f">>> [Slot {slot_id}] run_farm START user={user_id} stage={stage_id} count={count}")
-
-    try:
-        sdata = get_session(user_id, account_id)
-        account_id = str((sdata or {}).get("userId") or account_id or "")
-        if not sdata:
-            await safe_reply(interaction, content="❌ セッションなし", ephemeral=True)
+        accs = get_user_accounts(interaction.user.id)
+        if not accs:
+            await safe_reply(interaction, content="❌ アカウントが登録されていません。", ephemeral=True)
             return
-        client = build_client_from_account(sdata)
-        try:
-            await asyncio.to_thread(client.login, sdata["userId"])
-            await update_token(user_id, account_id, client)
-        except Exception as e:
-            await safe_reply(interaction, content=f"❌ 再ログイン失敗: `{str(e)[:300]}`", ephemeral=True)
-            return
-
-        tracker = GainTracker(client)
-        buy_count = 0
-        rc5_stage, rc5_streak = None, 0
-
-        loops = load_loops()
-        loops[loop_key] = {
-            "type": "farm", "user_id": user_id, "stage_id": stage_id,
-            "count": count, "current": 0, "success": 0, "fail": 0,
-            "account_id": account_id, "player_name": (sdata or {}).get("player_name"),
-            "status": "running", "request_delay": request_delay,
-            "cooldown": cooldown, "end_at": end_at,
-            "buy_count": 0, "buy_ym": 0, "slot_id": slot_id,
-            "started_at": datetime.now(JST).isoformat()
-        }
-        apply_gain_to_loop(loops[loop_key], tracker)
-        await save_loops_async(loops)
-
-        embed = build_progress_embed(loop_key, loops[loop_key], "🔄 周回中...")
-        await safe_edit_original(interaction, content=None, embed=embed)
-
-        start_time = time.time()
-        last_update = 0
-        end_reason = None
-        consecutive_errors = 0
-
-        for i in range(1, count + 1):
-            loops = load_loops()
-            if loop_key not in loops or loops.get(loop_key, {}).get("status") == "stopped":
-                end_reason = "ユーザー停止"; break
-            if end_at and time.time() >= end_at:
-                end_reason = "指定日時到達"; break
-
-            await check_odd_hour_rest(loop_key)
-
-            current_hitodama = get_hitodama(client)
-            if AUTO_BUY_HITODAMA and current_hitodama < HITODAMA_THRESHOLD:
-                bought, buy_info, buy_count = await try_auto_buy(client, buy_count)
-                if bought:
-                    loops[loop_key]["buy_count"] = buy_count
-                    loops[loop_key]["buy_ym"] = buy_count * AUTO_BUY_COST_YM
-                    new_hitodama = get_hitodama(client)
-                    embed = build_progress_embed(loop_key, loops[loop_key], f"💠 人魂補充 ({current_hitodama} → {new_hitodama})")
-                    await safe_edit_original(interaction, embed=embed)
-                else:
-                    await tracker.refresh()
-                    apply_gain_to_loop(loops[loop_key], tracker)
-                    loops[loop_key]["status"] = "paused_hitodama"
-                    update_slot(slot_id, status="paused_hitodama")
-                    await update_panel_on_change()
-                    await save_loops_async(loops)
-                    await send_hitodama_dm(bot, user_id, loop_key, stage_id, count, i - 1,
-                                           request_delay, cooldown, current_hitodama, end_at, buy_info=buy_info)
-                    embed = discord.Embed(
-                        title="⚠️ 人魂不足で周回停止（自動購入失敗）",
-                        description=f"**現在の人魂**: {current_hitodama}\n**進捗**: {i - 1} / {count}\n\nDMを確認",
-                        color=0xff4444
-                    )
-                    await safe_edit_original(interaction, content=None, embed=embed)
-                    return
-
-            rd = rand_request_delay() if use_random_rd else request_delay
-            await asyncio.sleep(rd)
-
-            try:
-                for retry_idx in range(len(RETRY_WAITS) + 1):
-                    rc, result = await asyncio.to_thread(client.battle, stage_id)
-                    result_code = result.get("resultCode")
-                    if result_code == 0:
-                        loops[loop_key]["success"] += 1
-                        consecutive_errors = 0
-                        await tracker.after_battle(result)
-                        apply_gain_to_loop(loops[loop_key], tracker)
-                        break
-                    if result_code == 32:
-                        try:
-                            await asyncio.to_thread(client.login, sdata["userId"])
-                            await update_token(user_id, account_id, client)
-                            continue
-                        except Exception:
-                            pass
-                    if (result_code == LOCKED_RC and rc5_streak >= 1):
-                        pass
-                    elif result_code in RETRY_CODES and retry_idx < len(RETRY_WAITS):
-                        await asyncio.sleep(RETRY_WAITS[retry_idx])
-                        continue
-                    loops[loop_key]["fail"] += 1
-                    if result_code == LOCKED_RC:
-                        cur_stage = loops[loop_key].get("current_stage") or loops[loop_key].get("stage_id")
-                        if rc5_stage == cur_stage:
-                            rc5_streak += 1
-                        else:
-                            rc5_stage, rc5_streak = cur_stage, 1
-                        if rc5_streak >= LOCKED_STAGE_LIMIT:
-                            loops[loop_key]["status"] = "fatal"
-                            await save_loops_async(loops)
-                            end_reason = f"ステージ `{cur_stage}` に入れません（rc=5 が{rc5_streak}周連続）"
-                            await send_locked_dm(bot, user_id, cur_stage, loops[loop_key].get("player_name"), rc5_streak)
-                            break
-                    else:
-                        rc5_streak = 0
-                    if result_code in (202, 30):
-                        loops[loop_key]["status"] = "fatal"
-                        await save_loops_async(loops)
-                        end_reason = f"致命的エラー (rc={result_code})"
-                        break
-                    consecutive_errors += 1
-                    if consecutive_errors >= MAX_CONSECUTIVE_ERRORS:
-                        loops[loop_key]["status"] = "fatal"
-                        await save_loops_async(loops)
-                        end_reason = f"連続エラー{MAX_CONSECUTIVE_ERRORS}回"
-                        break
-                    break
-                if end_reason:
-                    break
-            except Exception:
-                loops[loop_key]["fail"] += 1
-                consecutive_errors += 1
-                if consecutive_errors >= MAX_CONSECUTIVE_ERRORS:
-                    loops[loop_key]["status"] = "fatal"
-                    await save_loops_async(loops)
-                    end_reason = f"連続エラー{MAX_CONSECUTIVE_ERRORS}回（例外）"
-                    break
-
-            loops[loop_key]["current"] = i
-            await save_loops_async(loops)
-
-            now = time.time()
-            if now - last_update >= 3 or i == count:
-                embed = build_progress_embed(loop_key, loops[loop_key], "🔄 周回中...")
-                await safe_edit_original(interaction, embed=embed)
-                last_update = now
-
-            if i < count:
-                cd = rand_cooldown() if use_random_cd else cooldown
-                await asyncio.sleep(cd)
-
-        await tracker.refresh()
-        loops = load_loops()
-        loops[loop_key]["status"] = "done"
-        loops[loop_key]["end_reason"] = end_reason or "全回数完了"
-        apply_gain_to_loop(loops[loop_key], tracker)
-        await save_loops_async(loops)
-
-        elapsed = time.time() - start_time
-        embed = build_progress_embed(loop_key, loops[loop_key], "✅ 完了", elapsed)
-        embed.add_field(name="🏁 終了理由", value=end_reason or "全回数完了", inline=False)
-        await safe_edit_original(interaction, embed=embed)
-    except Exception as e:
-        print(f">>> [Slot {slot_id}] run_farm 致命的: {e}")
-        import traceback
-        traceback.print_exc()
-    finally:
-        await finalize_loop(loop_key)
-        await release_slot(slot_id)
-
-
-# ============================================================
-# ステージ進行タスク
-# ============================================================
-async def run_progress(bot, interaction, guild_id, user_id, start_id, end_id, end_at=None, account_id=None):
-    loop_key = f"{user_id}_progress_{int(time.time())}"
-    slot_id = await assign_slot(loop_key, user_id, "progress", f"{start_id}〜{end_id}")
-    if slot_id is None:
-        return
-    try:
-        sdata = get_session(user_id, account_id)
-        account_id = str((sdata or {}).get("userId") or account_id or "")
-        if not sdata:
-            return
-        client = build_client_from_account(sdata)
-        try:
-            await asyncio.to_thread(client.login, sdata["userId"])
-            await update_token(user_id, account_id, client)
-        except Exception:
-            return
-        target_ids = [sid for sid in range(start_id, end_id + 1)]
-        total = len(target_ids)
-        tracker = GainTracker(client)
-        buy_count = 0
-        rc5_stage, rc5_streak = None, 0
-
-        loops = load_loops()
-        loops[loop_key] = {
-            "type": "progress", "user_id": user_id,
-            "start_id": start_id, "end_id": end_id, "total": total,
-            "current": 0, "success": 0, "fail": 0,
-            "account_id": account_id, "player_name": (sdata or {}).get("player_name"),
-            "status": "running", "end_at": end_at, "slot_id": slot_id,
-            "current_stage": target_ids[0],
-            "buy_count": 0, "buy_ym": 0,
-            "started_at": datetime.now(JST).isoformat()
-        }
-        apply_gain_to_loop(loops[loop_key], tracker)
-        await save_loops_async(loops)
-
-        embed = build_progress_embed(loop_key, loops[loop_key], "🎯 ステージ進行中...")
-        await safe_edit_original(interaction, content=None, embed=embed)
-
-        start_time = time.time()
-        last_update = 0
-        end_reason = None
-        consecutive_errors = 0
-
-        for idx, stage_id in enumerate(target_ids, 1):
-            loops = load_loops()
-            if loop_key not in loops or loops.get(loop_key, {}).get("status") == "stopped":
-                end_reason = "ユーザー停止"; break
-            if end_at and time.time() >= end_at:
-                end_reason = "指定日時到達"; break
-
-            await check_odd_hour_rest(loop_key)
-
-            current_hitodama = get_hitodama(client)
-            if AUTO_BUY_HITODAMA and current_hitodama < HITODAMA_THRESHOLD:
-                bought, buy_info, buy_count = await try_auto_buy(client, buy_count)
-                if bought:
-                    loops[loop_key]["buy_count"] = buy_count
-                    loops[loop_key]["buy_ym"] = buy_count * AUTO_BUY_COST_YM
-                    new_hitodama = get_hitodama(client)
-                    embed = build_progress_embed(loop_key, loops[loop_key], f"💠 人魂補充 ({current_hitodama} → {new_hitodama})")
-                    await safe_edit_original(interaction, embed=embed)
-                else:
-                    await tracker.refresh()
-                    apply_gain_to_loop(loops[loop_key], tracker)
-                    loops[loop_key]["status"] = "paused_hitodama"
-                    update_slot(slot_id, status="paused_hitodama")
-                    await update_panel_on_change()
-                    await save_loops_async(loops)
-                    await send_hitodama_dm(bot, user_id, loop_key, stage_id, total, idx - 1,
-                                           0.5, 0.5, current_hitodama, end_at, buy_info=buy_info)
-                    embed = discord.Embed(
-                        title="⚠️ 人魂不足で進行停止（自動購入失敗）",
-                        description=f"**現在の人魂**: {current_hitodama}\n**進捗**: {idx - 1} / {total}\n\nDMを確認",
-                        color=0xff4444
-                    )
-                    await safe_edit_original(interaction, content=None, embed=embed)
-                    return
-
-            await asyncio.sleep(rand_request_delay())
-
-            try:
-                for retry_idx in range(len(RETRY_WAITS) + 1):
-                    rc, result = await asyncio.to_thread(client.battle, stage_id)
-                    result_code = result.get("resultCode")
-                    if result_code == 0:
-                        loops[loop_key]["success"] += 1
-                        consecutive_errors = 0
-                        await tracker.after_battle(result)
-                        apply_gain_to_loop(loops[loop_key], tracker)
-                        break
-                    if result_code == 32:
-                        try:
-                            await asyncio.to_thread(client.login, sdata["userId"])
-                            await update_token(user_id, account_id, client)
-                            continue
-                        except Exception:
-                            pass
-                    if (result_code == LOCKED_RC and rc5_streak >= 1):
-                        pass
-                    elif result_code in RETRY_CODES and retry_idx < len(RETRY_WAITS):
-                        await asyncio.sleep(RETRY_WAITS[retry_idx])
-                        continue
-                    loops[loop_key]["fail"] += 1
-                    if result_code == LOCKED_RC:
-                        cur_stage = loops[loop_key].get("current_stage") or loops[loop_key].get("stage_id")
-                        if rc5_stage == cur_stage:
-                            rc5_streak += 1
-                        else:
-                            rc5_stage, rc5_streak = cur_stage, 1
-                        if rc5_streak >= LOCKED_STAGE_LIMIT:
-                            loops[loop_key]["status"] = "fatal"
-                            await save_loops_async(loops)
-                            end_reason = f"ステージ `{cur_stage}` に入れません（rc=5 が{rc5_streak}周連続）"
-                            await send_locked_dm(bot, user_id, cur_stage, loops[loop_key].get("player_name"), rc5_streak)
-                            break
-                    else:
-                        rc5_streak = 0
-                    if result_code in (202, 30):
-                        loops[loop_key]["status"] = "fatal"
-                        await save_loops_async(loops)
-                        end_reason = f"致命的エラー (rc={result_code}, stage={stage_id})"
-                        break
-                    consecutive_errors += 1
-                    if consecutive_errors >= MAX_CONSECUTIVE_ERRORS:
-                        loops[loop_key]["status"] = "fatal"
-                        await save_loops_async(loops)
-                        end_reason = f"連続エラー{MAX_CONSECUTIVE_ERRORS}回"
-                        break
-                    break
-                if end_reason:
-                    break
-            except Exception:
-                loops[loop_key]["fail"] += 1
-                consecutive_errors += 1
-                if consecutive_errors >= MAX_CONSECUTIVE_ERRORS:
-                    loops[loop_key]["status"] = "fatal"
-                    await save_loops_async(loops)
-                    end_reason = f"連続エラー{MAX_CONSECUTIVE_ERRORS}回（例外）"
-                    break
-
-            loops[loop_key]["current"] = idx
-            loops[loop_key]["current_stage"] = stage_id
-            await save_loops_async(loops)
-
-            now = time.time()
-            if now - last_update >= 3 or idx == total:
-                embed = build_progress_embed(loop_key, loops[loop_key], "🎯 ステージ進行中...")
-                await safe_edit_original(interaction, embed=embed)
-                last_update = now
-
-            if idx < total:
-                await asyncio.sleep(rand_cooldown())
-
-        await tracker.refresh()
-        loops = load_loops()
-        loops[loop_key]["status"] = "done"
-        loops[loop_key]["end_reason"] = end_reason or "全ステージ完了"
-        apply_gain_to_loop(loops[loop_key], tracker)
-        await save_loops_async(loops)
-
-        elapsed = time.time() - start_time
-        embed = build_progress_embed(loop_key, loops[loop_key], "✅ 完了", elapsed)
-        embed.add_field(name="🏁 終了理由", value=end_reason or "全ステージ完了", inline=False)
-        await safe_edit_original(interaction, embed=embed)
-    except Exception as e:
-        print(f">>> [Slot {slot_id}] run_progress 致命的: {e}")
-        import traceback
-        traceback.print_exc()
-    finally:
-        await finalize_loop(loop_key)
-        await release_slot(slot_id)
-
-
-# ============================================================
-# イベント自動進行タスク
-# ============================================================
-async def run_event_progress(bot, interaction, guild_id, user_id, start_id, end_at=None, account_id=None):
-    loop_key = f"{user_id}_event_{int(time.time())}"
-    slot_id = await assign_slot(loop_key, user_id, "event", f"start {start_id}")
-    if slot_id is None:
-        return
-    try:
-        sdata = get_session(user_id, account_id)
-        account_id = str((sdata or {}).get("userId") or account_id or "")
-        if not sdata:
-            return
-        client = build_client_from_account(sdata)
-        try:
-            await asyncio.to_thread(client.login, sdata["userId"])
-            await update_token(user_id, account_id, client)
-        except Exception:
-            return
-        tracker = GainTracker(client)
-        buy_count = 0
-        rc5_stage, rc5_streak = None, 0
-
-        loops = load_loops()
-        loops[loop_key] = {
-            "type": "event", "user_id": user_id,
-            "start_id": start_id, "total": 0,
-            "current": 0, "success": 0, "fail": 0,
-            "account_id": account_id, "player_name": (sdata or {}).get("player_name"),
-            "status": "running", "end_at": end_at, "slot_id": slot_id,
-            "current_stage": start_id,
-            "buy_count": 0, "buy_ym": 0,
-            "started_at": datetime.now(JST).isoformat()
-        }
-        apply_gain_to_loop(loops[loop_key], tracker)
-        await save_loops_async(loops)
-
-        embed = build_progress_embed(loop_key, loops[loop_key], "🎪 イベント自動進行中...")
-        await safe_edit_original(interaction, content=None, embed=embed)
-
-        start_time = time.time()
-        last_update = 0
-        end_reason = None
-        consecutive_errors = 0
-        current_id = start_id
-        processed = 0
-
-        while True:
-            loops = load_loops()
-            if loop_key not in loops or loops.get(loop_key, {}).get("status") == "stopped":
-                end_reason = "ユーザー停止"; break
-            if end_at and time.time() >= end_at:
-                end_reason = "指定日時到達"; break
-
-            await check_odd_hour_rest(loop_key)
-
-            current_hitodama = get_hitodama(client)
-            if AUTO_BUY_HITODAMA and current_hitodama < HITODAMA_THRESHOLD:
-                bought, buy_info, buy_count = await try_auto_buy(client, buy_count)
-                if bought:
-                    loops[loop_key]["buy_count"] = buy_count
-                    loops[loop_key]["buy_ym"] = buy_count * AUTO_BUY_COST_YM
-                    new_hitodama = get_hitodama(client)
-                    embed = build_progress_embed(loop_key, loops[loop_key], f"💠 人魂補充 ({current_hitodama} → {new_hitodama})")
-                    await safe_edit_original(interaction, embed=embed)
-                else:
-                    await tracker.refresh()
-                    apply_gain_to_loop(loops[loop_key], tracker)
-                    loops[loop_key]["status"] = "paused_hitodama"
-                    update_slot(slot_id, status="paused_hitodama")
-                    await update_panel_on_change()
-                    await save_loops_async(loops)
-                    await send_hitodama_dm(bot, user_id, loop_key, current_id, 999999, processed,
-                                           rand_request_delay(), rand_cooldown(), current_hitodama, end_at, buy_info=buy_info)
-                    embed = discord.Embed(
-                        title="⚠️ 人魂不足で進行停止（自動購入失敗）",
-                        description=f"**現在の人魂**: {current_hitodama}\n**処理済み**: {processed}\n\nDMを確認",
-                        color=0xff4444
-                    )
-                    await safe_edit_original(interaction, content=None, embed=embed)
-                    return
-
-            await asyncio.sleep(rand_request_delay())
-
-            result_code = None
-            try:
-                for retry_idx in range(len(RETRY_WAITS) + 1):
-                    rc, result = await asyncio.to_thread(client.battle, current_id)
-                    result_code = result.get("resultCode")
-                    print(f">>> [Slot {slot_id}] event battle stage={current_id} rc={rc} result_code={result_code}")
-                    if result_code == 0:
-                        loops[loop_key]["success"] += 1
-                        await tracker.after_battle(result)
-                        apply_gain_to_loop(loops[loop_key], tracker)
-                        break
-                    if result_code == 32:
-                        try:
-                            await asyncio.to_thread(client.login, sdata["userId"])
-                            await update_token(user_id, account_id, client)
-                            continue
-                        except Exception:
-                            pass
-                    if (result_code == LOCKED_RC and rc5_streak >= 1):
-                        pass
-                    elif result_code in RETRY_CODES and retry_idx < len(RETRY_WAITS):
-                        await asyncio.sleep(RETRY_WAITS[retry_idx])
-                        continue
-                    break
-            except Exception:
-                result_code = -1
-
-            processed += 1
-            loops[loop_key]["current"] = processed
-            loops[loop_key]["current_stage"] = current_id
-            await save_loops_async(loops)
-
-            now = time.time()
-            if now - last_update >= 3:
-                embed = build_progress_embed(loop_key, loops[loop_key], "🎪 イベント自動進行中...")
-                await safe_edit_original(interaction, embed=embed)
-                last_update = now
-
-            # ★ 成功 → 次IDへ
-            if result_code == 0:
-                consecutive_errors = 0
-                current_id += 1
-            # ★ rc=100（ID未実装）/ rc=1303（条件未達）→ 次ブロックへ
-            elif result_code in EVENT_SKIP_CODES:
-                next_start = next_block_start(current_id)
-                print(f">>> [Slot {slot_id}] {current_id} → 次ブロック {next_start} へ (rc={result_code})")
-                if next_start <= current_id:
-                    end_reason = f"次ブロック計算失敗"
-                    break
-                try:
-                    rc2, result2 = await asyncio.to_thread(client.battle, next_start)
-                    rc2_code = result2.get("resultCode")
-                    if rc2_code == 0:
-                        loops[loop_key]["success"] += 1
-                        await tracker.after_battle(result2)
-                        apply_gain_to_loop(loops[loop_key], tracker)
-                        processed += 1
-                        loops[loop_key]["current"] = processed
-                        loops[loop_key]["current_stage"] = next_start
-                        await save_loops_async(loops)
-                        current_id = next_start + 1
-                        continue
-                    elif rc2_code in EVENT_SKIP_CODES:
-                        end_reason = f"最終ブロック到達 ({next_start})"
-                        break
-                    else:
-                        end_reason = f"ジャンプ先エラー (rc={rc2_code})"
-                        break
-                except Exception as e:
-                    end_reason = f"ジャンプ先例外: {e}"
-                    break
-            # ★ BAN系 → 即停止
-            elif result_code in (202, 30):
-                loops[loop_key]["status"] = "fatal"
-                await save_loops_async(loops)
-                end_reason = f"致命的エラー (rc={result_code})"
-                break
-            # ★ その他 → 連続エラーカウントで停止
-            else:
-                consecutive_errors += 1
-                loops[loop_key]["fail"] += 1
-                print(f">>> [Slot {slot_id}] 連続エラー {consecutive_errors}/{MAX_CONSECUTIVE_ERRORS} (stage={current_id}, rc={result_code})")
-                if consecutive_errors >= MAX_CONSECUTIVE_ERRORS:
-                    loops[loop_key]["status"] = "fatal"
-                    await save_loops_async(loops)
-                    end_reason = f"連続エラー{MAX_CONSECUTIVE_ERRORS}回 (最後のrc={result_code})"
-                    break
-                current_id += 1
-
-            await asyncio.sleep(rand_cooldown())
-
-        await tracker.refresh()
-        loops = load_loops()
-        loops[loop_key]["status"] = "done"
-        loops[loop_key]["end_reason"] = end_reason or "完了"
-        apply_gain_to_loop(loops[loop_key], tracker)
-        await save_loops_async(loops)
-
-        elapsed = time.time() - start_time
-        embed = build_progress_embed(loop_key, loops[loop_key], "✅ 完了", elapsed)
-        embed.add_field(name="🏁 終了理由", value=end_reason or "完了", inline=False)
-        await safe_edit_original(interaction, embed=embed)
-    except Exception as e:
-        print(f">>> [Slot {slot_id}] run_event_progress 致命的: {e}")
-        import traceback
-        traceback.print_exc()
-    finally:
-        await finalize_loop(loop_key)
-        await release_slot(slot_id)
-
-
-# ============================================================
-# 周回タスク（DM再開）
-# ============================================================
-async def run_farm_dm(bot, interaction, user_id, stage_id, count, start_index,
-                      request_delay, cooldown, end_at=None, account_id=None):
-    loop_key = f"{user_id}_{stage_id}_{int(time.time())}"
-    slot_id = await assign_slot(loop_key, user_id, "farm", f"stage {stage_id} (DM)")
-    if slot_id is None:
-        return
-    try:
-        sdata = get_session(user_id, account_id)
-        account_id = str((sdata or {}).get("userId") or account_id or "")
-        if not sdata:
-            return
-        client = build_client_from_account(sdata)
-        try:
-            await asyncio.to_thread(client.login, sdata["userId"])
-        except Exception:
-            return
-        tracker = GainTracker(client)
-        buy_count = 0
-        rc5_stage, rc5_streak = None, 0
-
-        loops = load_loops()
-        loops[loop_key] = {
-            "type": "farm", "user_id": user_id, "stage_id": stage_id,
-            "count": count, "current": start_index - 1,
-            "success": 0, "fail": 0, "status": "running",
-            "account_id": account_id, "player_name": (sdata or {}).get("player_name"),
-            "request_delay": request_delay, "cooldown": cooldown,
-            "end_at": end_at, "slot_id": slot_id,
-            "buy_count": 0, "buy_ym": 0,
-            "started_at": datetime.now(JST).isoformat()
-        }
-        apply_gain_to_loop(loops[loop_key], tracker)
-        await save_loops_async(loops)
-
-        end_reason = None
-        consecutive_errors = 0
-
-        for i in range(start_index, count + 1):
-            loops = load_loops()
-            if loop_key not in loops or loops.get(loop_key, {}).get("status") == "stopped":
-                end_reason = "ユーザー停止"; break
-            if end_at and time.time() >= end_at:
-                end_reason = "指定日時到達"; break
-
-            await check_odd_hour_rest(loop_key)
-
-            current_hitodama = get_hitodama(client)
-            if AUTO_BUY_HITODAMA and current_hitodama < HITODAMA_THRESHOLD:
-                bought, buy_info, buy_count = await try_auto_buy(client, buy_count)
-                if bought:
-                    loops[loop_key]["buy_count"] = buy_count
-                    loops[loop_key]["buy_ym"] = buy_count * AUTO_BUY_COST_YM
-                else:
-                    await tracker.refresh()
-                    apply_gain_to_loop(loops[loop_key], tracker)
-                    loops[loop_key]["status"] = "paused_hitodama"
-                    update_slot(slot_id, status="paused_hitodama")
-                    await update_panel_on_change()
-                    await save_loops_async(loops)
-                    await send_hitodama_dm(bot, user_id, loop_key, stage_id, count, i - 1,
-                                           request_delay, cooldown, current_hitodama, end_at, buy_info=buy_info)
-                    return
-
-            await asyncio.sleep(rand_request_delay())
-
-            try:
-                for retry_idx in range(len(RETRY_WAITS) + 1):
-                    rc, result = await asyncio.to_thread(client.battle, stage_id)
-                    result_code = result.get("resultCode")
-                    if result_code == 0:
-                        loops[loop_key]["success"] += 1
-                        consecutive_errors = 0
-                        await tracker.after_battle(result)
-                        apply_gain_to_loop(loops[loop_key], tracker)
-                        break
-                    if result_code == 32:
-                        try:
-                            await asyncio.to_thread(client.login, sdata["userId"])
-                            await update_token(user_id, account_id, client)
-                            continue
-                        except Exception:
-                            pass
-                    if (result_code == LOCKED_RC and rc5_streak >= 1):
-                        pass
-                    elif result_code in RETRY_CODES and retry_idx < len(RETRY_WAITS):
-                        await asyncio.sleep(RETRY_WAITS[retry_idx])
-                        continue
-                    loops[loop_key]["fail"] += 1
-                    if result_code == LOCKED_RC:
-                        cur_stage = loops[loop_key].get("current_stage") or loops[loop_key].get("stage_id")
-                        if rc5_stage == cur_stage:
-                            rc5_streak += 1
-                        else:
-                            rc5_stage, rc5_streak = cur_stage, 1
-                        if rc5_streak >= LOCKED_STAGE_LIMIT:
-                            loops[loop_key]["status"] = "fatal"
-                            await save_loops_async(loops)
-                            end_reason = f"ステージ `{cur_stage}` に入れません（rc=5 が{rc5_streak}周連続）"
-                            await send_locked_dm(bot, user_id, cur_stage, loops[loop_key].get("player_name"), rc5_streak)
-                            break
-                    else:
-                        rc5_streak = 0
-                    if result_code in (202, 30):
-                        loops[loop_key]["status"] = "fatal"
-                        await save_loops_async(loops)
-                        end_reason = f"致命的エラー (rc={result_code})"
-                        break
-                    consecutive_errors += 1
-                    if consecutive_errors >= MAX_CONSECUTIVE_ERRORS:
-                        loops[loop_key]["status"] = "fatal"
-                        await save_loops_async(loops)
-                        end_reason = f"連続エラー{MAX_CONSECUTIVE_ERRORS}回"
-                        break
-                    break
-                if end_reason:
-                    break
-            except Exception:
-                loops[loop_key]["fail"] += 1
-                consecutive_errors += 1
-                if consecutive_errors >= MAX_CONSECUTIVE_ERRORS:
-                    loops[loop_key]["status"] = "fatal"
-                    await save_loops_async(loops)
-                    end_reason = f"連続エラー{MAX_CONSECUTIVE_ERRORS}回（例外）"
-                    break
-
-            loops[loop_key]["current"] = i
-            await save_loops_async(loops)
-            if i < count:
-                await asyncio.sleep(rand_cooldown())
-
-        await tracker.refresh()
-        loops = load_loops()
-        loops[loop_key]["status"] = "done"
-        loops[loop_key]["end_reason"] = end_reason or "全回数完了"
-        apply_gain_to_loop(loops[loop_key], tracker)
-        await save_loops_async(loops)
-        try:
-            user = await bot.fetch_user(user_id)
-            embed = discord.Embed(
-                title="✅ 周回完了",
-                description=(
-                    f"**ステージ**: `{stage_id}`\n"
-                    f"**成功**: {loops[loop_key]['success']}\n"
-                    f"**失敗**: {loops[loop_key]['fail']}\n"
-                    f"**終了理由**: {end_reason or '全回数完了'}"
-                ),
-                color=0x00ff88, timestamp=datetime.now(JST)
-            )
-            gain_fields(embed, loops[loop_key], done=True)
-            await user.send(embed=embed)
-        except Exception:
-            pass
-    except Exception as e:
-        print(f">>> [Slot {slot_id}] run_farm_dm 致命的: {e}")
-        import traceback
-        traceback.print_exc()
-    finally:
-        await finalize_loop(loop_key)
-        await release_slot(slot_id)
-
-
-# ============================================================
-# 進行Embed
-# ============================================================
-def build_progress_embed(loop_key, data, status_text, elapsed=None):
-    loop_type = data.get("type", "farm")
-    if loop_type == "bench":
-        return build_bench_embed(loop_key, data, status_text, elapsed)
-    elif loop_type == "progress":
-        return build_progress_embed_progress(loop_key, data, status_text, elapsed)
-    elif loop_type == "event":
-        return build_progress_embed_event(loop_key, data, status_text, elapsed)
-    else:
-        return build_progress_embed_farm(loop_key, data, status_text, elapsed)
-
-
-def build_progress_embed_farm(loop_key, data, status_text, elapsed=None):
-    current = data.get("current", 0)
-    count = data.get("count", 0)
-    success = data.get("success", 0)
-    fail = data.get("fail", 0)
-    pct = (current / count * 100) if count else 0
-    if pct > 100: pct = 100
-    filled = int(20 * pct / 100)
-    bar = "█" * filled + "░" * (20 - filled)
-    embed = discord.Embed(title=f"🎮 ぷにぷに 周回 — {status_text}", color=0x5865F2, timestamp=datetime.now(JST))
-    embed.add_field(name="🆔 ステージ", value=f"`{data.get('stage_id')}`", inline=True)
-    embed.add_field(name="📊 進捗", value=f"**{current} / {count if count < 999999 else '日時まで'}**", inline=True)
-    embed.add_field(name="📈 成功率", value=f"{(success/max(current,1)*100 if current else 0):.1f}%", inline=True)
-    embed.add_field(name="✅ 成功", value=str(success), inline=True)
-    embed.add_field(name="❌ 失敗", value=str(fail), inline=True)
-    if elapsed is not None:
-        embed.add_field(name="⏱️ 実行時間", value=f"{elapsed:.1f}秒", inline=True)
-    embed.add_field(name="進行状況", value=f"`{bar}` {pct:.1f}%", inline=False)
-    end_at = data.get("end_at")
-    if end_at:
-        embed.add_field(name="⏰ 終了予定", value=f"<t:{int(end_at)}:R>", inline=True)
-    gain_fields(embed, data, done=data.get("status") in ("done", "fatal", "stopped"))
-    running = get_running_count()
-    who = data.get("player_name")
-    embed.set_footer(text=(f"{who} | " if who else "") + f"同時実行: {running}/{MAX_CONCURRENT_LOOPS}")
-    return embed
-
-
-def build_progress_embed_progress(loop_key, data, status_text, elapsed=None):
-    current = data.get("current", 0)
-    total = data.get("total", 0)
-    success = data.get("success", 0)
-    fail = data.get("fail", 0)
-    current_stage = data.get("current_stage", "-")
-    pct = (current / total * 100) if total else 0
-    if pct > 100: pct = 100
-    filled = int(20 * pct / 100)
-    bar = "█" * filled + "░" * (20 - filled)
-    embed = discord.Embed(title=f"🎯 ステージ進行 — {status_text}", color=0x9B59B6, timestamp=datetime.now(JST))
-    embed.add_field(name="🔢 範囲", value=f"`{data.get('start_id')}` 〜 `{data.get('end_id')}`", inline=True)
-    embed.add_field(name="📊 進捗", value=f"**{current} / {total}**", inline=True)
-    embed.add_field(name="🎮 現在", value=f"`{current_stage}`", inline=True)
-    embed.add_field(name="✅ 成功", value=str(success), inline=True)
-    embed.add_field(name="❌ 失敗", value=str(fail), inline=True)
-    if elapsed is not None:
-        embed.add_field(name="⏱️ 実行時間", value=f"{elapsed:.1f}秒", inline=True)
-    embed.add_field(name="進行状況", value=f"`{bar}` {pct:.1f}%", inline=False)
-    end_at = data.get("end_at")
-    if end_at:
-        embed.add_field(name="⏰ 終了予定", value=f"<t:{int(end_at)}:R>", inline=True)
-    gain_fields(embed, data, done=data.get("status") in ("done", "fatal", "stopped"))
-    running = get_running_count()
-    who = data.get("player_name")
-    embed.set_footer(text=(f"{who} | " if who else "") + f"同時実行: {running}/{MAX_CONCURRENT_LOOPS}")
-    return embed
-
-
-def build_progress_embed_event(loop_key, data, status_text, elapsed=None):
-    current = data.get("current", 0)
-    success = data.get("success", 0)
-    fail = data.get("fail", 0)
-    current_stage = data.get("current_stage", "-")
-    embed = discord.Embed(title=f"🎪 イベント自動進行 — {status_text}", color=0xE67E22, timestamp=datetime.now(JST))
-    embed.add_field(name="🚀 開始ID", value=f"`{data.get('start_id')}`", inline=True)
-    embed.add_field(name="🎮 現在", value=f"`{current_stage}`", inline=True)
-    embed.add_field(name="📊 処理数", value=f"**{current}**", inline=True)
-    embed.add_field(name="✅ 成功", value=str(success), inline=True)
-    embed.add_field(name="❌ 失敗", value=str(fail), inline=True)
-    if elapsed is not None:
-        embed.add_field(name="⏱️ 実行時間", value=f"{elapsed:.1f}秒", inline=True)
-    end_at = data.get("end_at")
-    if end_at:
-        embed.add_field(name="⏰ 終了予定", value=f"<t:{int(end_at)}:R>", inline=True)
-    gain_fields(embed, data, done=data.get("status") in ("done", "fatal", "stopped"))
-    who = data.get("player_name")
-    embed.set_footer(text=(f"{who} | " if who else "") + "rc=100/1303 で次ブロックへ")
-    return embed
-
-
-# ============================================================
-# 効率計測
-# ============================================================
-def parse_stage_list(raw: str) -> list:
-    out = []
-    for token in re.split(r"[,\s]+", (raw or "").strip()):
-        if not token:
-            continue
-        if "-" in token:
-            a, _, b = token.partition("-")
-            start, end = int(a), int(b)
-            if end < start:
-                raise ValueError(f"範囲が逆: {token}")
-            if end - start + 1 > BENCH_MAX_STAGES:
-                raise ValueError(f"範囲が広すぎ: {token}")
-            out.extend(range(start, end + 1))
-        else:
-            out.append(int(token))
-    uniq = []
-    for sid in out:
-        if sid not in uniq:
-            uniq.append(sid)
-    return uniq
-
-
-def disp_width(s: str) -> int:
-    return sum(2 if unicodedata.east_asian_width(c) in "WF" else 1 for c in str(s))
-
-
-def pad_disp(s: str, width: int, right: bool = False) -> str:
-    space = " " * max(0, width - disp_width(s))
-    return (space + str(s)) if right else (str(s) + space)
-
-
-def metric_label(results) -> tuple:
-    use_ep = any((r.get("ep_total") or 0) for r in (results or []))
-    if use_ep:
-        name = next((r.get("point_name") for r in results if r.get("point_name")), "イベントP")
-        return "ep", name, ("Yポ" if "ポイント" in name else name[:3])
-    return "money", "マネー", "マネ"
-
-
-def metric_of(r: dict, kind: str, field: str):
-    if kind == "ep":
-        return r.get("ep_" + field) or 0
-    return r.get("money_" + field) or 0
-
-
-def bench_row(r: dict, kind: str) -> str:
-    def num(v, fmt):
-        return format(v, fmt) if isinstance(v, (int, float)) else "-"
-    return (f"{r['stage_id']:<9}{r['success']:>3}"
-            f"{num(metric_of(r, kind, 'per'), '>9.1f')}"
-            f"{num(r.get('hitodama_per'), '>8.2f')}"
-            f"{num(metric_of(r, kind, 'per_hitodama'), '>10.1f')}"
-            f"{num(r.get('sec_per'), '>8.1f')}")
-
-
-def build_bench_embed(loop_key, data, status_text, elapsed=None):
-    done = data.get("status") in ("done", "fatal", "stopped")
-    results = data.get("results") or []
-    total = data.get("total", 0)
-    current = data.get("current", 0)
-    embed = discord.Embed(title=f"📐 効率計測 — {status_text}", color=0x1ABC9C, timestamp=datetime.now(JST))
-    embed.add_field(name="🎮 現在", value=f"`{data.get('current_stage', '-')}`", inline=True)
-    embed.add_field(name="📊 進捗", value=f"**{current} / {total}** 周", inline=True)
-    embed.add_field(name="🔁 1ステージ", value=f"{data.get('samples', 0)} 回ずつ", inline=True)
-    if results:
-        kind, label, short = metric_label(results)
-        ranked = sorted(results, key=lambda r: -metric_of(r, kind, "per_hitodama"))
-        head = (pad_disp("ステージ", 9) + pad_disp("周", 3, True) +
-                pad_disp(short + "/周", 9, True) + pad_disp("人魂/周", 8, True) +
-                pad_disp(short + "/人魂", 10, True) + pad_disp("秒/周", 8, True))
-        lines = [head, "-" * 47] + [bench_row(r, kind) for r in ranked]
-        embed.add_field(name=f"📋 結果（{label}/人魂の高い順）",
-                        value="```\n" + "\n".join(lines) + "\n```", inline=False)
-        best = ranked[0]
-        if metric_of(best, kind, "per_hitodama"):
-            extra = ""
-            if kind == "ep" and best.get("money_per"):
-                extra = f"\nおまけ: マネー {best['money_per']:,.0f}/周"
-            embed.add_field(
-                name="🏆 一番おいしいステージ",
-                value=(f"`{best['stage_id']}` — 人魂1個あたり "
-                       f"**{metric_of(best, kind, 'per_hitodama'):,.1f} {label}**\n"
-                       f"1周 {metric_of(best, kind, 'per'):,.1f} {label} / "
-                       f"{best.get('sec_per') or 0:.1f}秒" + extra),
-                inline=False
-            )
-    if data.get("buy_count"):
-        embed.add_field(name="💠 人魂購入", value=f"{data['buy_count']} 回 (-{data.get('buy_ym', 0):,} YM)", inline=True)
-    if elapsed is not None:
-        embed.add_field(name="⏱️ 実行時間", value=f"{elapsed:.1f}秒", inline=True)
-    if done and data.get("end_reason"):
-        embed.add_field(name="🏁 終了理由", value=data["end_reason"], inline=False)
-    who = data.get("player_name")
-    embed.set_footer(text=(f"{who} | " if who else "") + "人魂は計測中も時間回復するので、人魂/周はやや少なめに出ます")
-    return embed
-
-
-async def run_benchmark(bot, interaction, guild_id, user_id, stage_ids, samples, account_id=None):
-    loop_key = f"{user_id}_bench_{int(time.time())}"
-    slot_id = await assign_slot(loop_key, user_id, "bench", f"{len(stage_ids)}st x {samples}")
-    if slot_id is None:
-        return
-    try:
-        sdata = get_session(user_id, account_id)
-        account_id = str((sdata or {}).get("userId") or account_id or "")
-        if not sdata:
-            return
-        client = build_client_from_account(sdata)
-        try:
-            await asyncio.to_thread(client.login, sdata["userId"])
-            await update_token(user_id, account_id, client)
-        except Exception:
-            return
-        loops = load_loops()
-        loops[loop_key] = {
-            "type": "bench", "user_id": user_id,
-            "stages": stage_ids, "samples": samples,
-            "total": len(stage_ids) * samples, "current": 0,
-            "success": 0, "fail": 0, "status": "running",
-            "account_id": account_id, "player_name": (sdata or {}).get("player_name"),
-            "current_stage": stage_ids[0], "results": [],
-            "buy_count": 0, "buy_ym": 0, "slot_id": slot_id,
-            "started_at": datetime.now(JST).isoformat()
-        }
-        await save_loops_async(loops)
-        embed = build_bench_embed(loop_key, loops[loop_key], "📐 計測中...")
-        await safe_edit_original(interaction, content=None, embed=embed)
-
-        start_time = time.time()
-        end_reason = None
-        buy_count = 0
-        results = []
-        done_battles = 0
-        total_success = 0
-        total_fail = 0
-
-        for sid in stage_ids:
-            loops = load_loops()
-            if loop_key not in loops or loops[loop_key].get("status") == "stopped":
-                end_reason = "ユーザー停止"; break
-            try:
-                await asyncio.to_thread(client.login, sdata["userId"])
-            except Exception as e:
-                end_reason = f"ログイン失敗: {str(e)[:80]}"; break
-
-            before = get_hitodama_detail(client)
-            tracker = GainTracker(client)
-            stage_buys = 0
-            ok_n = 0
-            ng_n = 0
-            stage_locked = 0
-            skip_stage = False
-            stage_start = time.time()
-
-            for _ in range(samples):
-                if skip_stage: break
-                loops = load_loops()
-                if loop_key not in loops or loops[loop_key].get("status") == "stopped":
-                    end_reason = "ユーザー停止"; break
-                if get_hitodama(client) < 1:
-                    bought, buy_info, buy_count = await try_auto_buy(client, buy_count)
-                    if bought:
-                        stage_buys += 1
-                    else:
-                        end_reason = f"人魂不足: {describe_buy_failure(buy_info)[:150]}"
-                        break
-                await asyncio.sleep(rand_request_delay())
-                try:
-                    for retry_idx in range(len(RETRY_WAITS) + 1):
-                        rc, result = await asyncio.to_thread(client.battle, sid)
-                        code = result.get("resultCode")
-                        if code == 0:
-                            ok_n += 1
-                            total_success += 1
-                            await tracker.after_battle(result)
-                            break
-                        if code == 32:
-                            await asyncio.to_thread(client.login, sdata["userId"])
-                            await update_token(user_id, account_id, client)
-                            continue
-                        if code in RETRY_CODES and retry_idx < len(RETRY_WAITS):
-                            await asyncio.sleep(RETRY_WAITS[retry_idx])
-                            continue
-                        ng_n += 1
-                        total_fail += 1
-                        if code == LOCKED_RC:
-                            stage_locked += 1
-                            if stage_locked >= 2:
-                                skip_stage = True
-                        if code in (202, 30):
-                            end_reason = f"致命的エラー (rc={code})"
-                        break
-                except Exception:
-                    ng_n += 1
-                    total_fail += 1
-                done_battles += 1
-                loops = load_loops()
-                if loop_key in loops:
-                    loops[loop_key]["current"] = done_battles
-                    loops[loop_key]["current_stage"] = sid
-                    loops[loop_key]["success"] = total_success
-                    loops[loop_key]["fail"] = total_fail
-                    loops[loop_key]["buy_count"] = buy_count
-                    loops[loop_key]["buy_ym"] = buy_count * AUTO_BUY_COST_YM
-                    await save_loops_async(loops)
-                if end_reason: break
-                await asyncio.sleep(rand_cooldown())
-
-            await tracker.refresh()
-            after = get_hitodama_detail(client)
-            consumed = before["total"] + stage_buys * AUTO_BUY_HITODAMA_GAIN - after["total"]
-            elapsed_stage = time.time() - stage_start
-            ep = tracker.event_point
-            row = {
-                "stage_id": sid, "success": ok_n, "fail": ng_n,
-                "point_name": tracker.point_name, "ep_total": ep,
-                "ep_per": (ep / ok_n) if ok_n else None,
-                "ep_per_hitodama": (ep / consumed) if consumed > 0 else None,
-                "money_total": tracker.money_gain,
-                "money_per": (tracker.money_gain / ok_n) if ok_n else None,
-                "money_per_hitodama": (tracker.money_gain / consumed) if consumed > 0 else None,
-                "exp_total": tracker.exp_gain,
-                "hitodama": consumed,
-                "hitodama_per": (consumed / ok_n) if ok_n else None,
-                "sec_per": (elapsed_stage / ok_n) if ok_n else None,
-            }
-            results.append(row)
-            save_bench_results([row], user_id)
-            loops = load_loops()
-            if loop_key in loops:
-                loops[loop_key]["results"] = results
-                loops[loop_key]["money_gain"] = sum(x.get("money_total") or 0 for x in results)
-                loops[loop_key]["money_counted"] = sum(x.get("success") or 0 for x in results)
-                loops[loop_key]["event_point"] = sum(x.get("ep_total") or 0 for x in results)
-                loops[loop_key]["point_name"] = next((x.get("point_name") for x in results if x.get("point_name")), None)
-                await save_loops_async(loops)
-                embed = build_bench_embed(loop_key, loops[loop_key], "📐 計測中...")
-                await safe_edit_original(interaction, embed=embed)
-            if end_reason: break
-
-        loops = load_loops()
-        if loop_key in loops:
-            loops[loop_key]["status"] = "done"
-            loops[loop_key]["end_reason"] = end_reason or "計測完了"
-            loops[loop_key]["results"] = results
-            await save_loops_async(loops)
-            embed = build_bench_embed(loop_key, loops[loop_key], "✅ 完了", time.time() - start_time)
-            await safe_edit_original(interaction, embed=embed)
-    except Exception as e:
-        print(f">>> [Slot {slot_id}] run_benchmark 致命的: {e}")
-        import traceback
-        traceback.print_exc()
-    finally:
-        await finalize_loop(loop_key)
-        await release_slot(slot_id)
-
-
-# ============================================================
-# ジョブ後始末・日次集計
-# ============================================================
-def load_daily() -> dict:
-    return load_json(DAILY_FILE, {})
-
-
-def record_daily(user_id, money=0, battles=0, buys=0, stage=None, date_key=None):
-    data = load_daily()
-    key = date_key or datetime.now(JST).strftime("%Y-%m-%d")
-    day = data.setdefault(key, {})
-    u = day.setdefault(str(user_id), {"money": 0, "battles": 0, "buys": 0, "ym": 0, "stages": {}})
-    u["money"] += int(money or 0)
-    u["battles"] += int(battles or 0)
-    u["buys"] += int(buys or 0)
-    u["ym"] += int(buys or 0) * AUTO_BUY_COST_YM
-    if stage and battles:
-        u["stages"][str(stage)] = u["stages"].get(str(stage), 0) + int(battles)
-    save_json(DAILY_FILE, data)
-    return u
-
-
-async def finalize_loop(loop_key: str):
-    loops = load_loops()
-    data = loops.get(loop_key)
-    if not data:
-        return
-    changed = False
-    if data.get("status") == "running":
-        data["status"] = "error"
-        data.setdefault("end_reason", "異常終了（例外で中断）")
-        changed = True
-    if not data.get("daily_recorded"):
-        stage = data.get("stage_id") if data.get("type") == "farm" else None
-        record_daily(
-            data.get("user_id"),
-            money=data.get("money_gain") or 0,
-            battles=data.get("success") or 0,
-            buys=data.get("buy_count") or 0,
-            stage=stage,
-        )
-        data["daily_recorded"] = True
-        changed = True
-    if changed:
-        await save_loops_async(loops)
-
-
-def reset_stale_loops():
-    loops = load_loops()
-    stale = [k for k, v in loops.items() if v.get("status") == "running"]
-    for k in stale:
-        loops[k]["status"] = "error"
-        loops[k]["end_reason"] = "Bot再起動で中断"
-    if stale:
-        save_loops(loops)
-    return len(stale)
-
-
-def reset_stale_slots():
-    data = load_slots()
-    for i in range(MAX_SLOTS):
-        s = data["slots"].get(str(i))
-        if s and s.get("status") == "running":
-            job_key = s.get("job_key")
-            loops = load_loops()
-            if job_key not in loops:
-                data["slots"][str(i)] = None
-    save_slots(data)
-
-
-# ============================================================
-# 日次レポート
-# ============================================================
-def daily_summary(user_id, days: int = 7) -> list:
-    data = load_daily()
-    out = []
-    for i in range(days):
-        key = (datetime.now(JST) - timedelta(days=i)).strftime("%Y-%m-%d")
-        u = (data.get(key) or {}).get(str(user_id))
-        if u:
-            out.append((key, u))
-    return out
-
-
-def build_daily_embed(user_id, player_name=None, days: int = 7) -> discord.Embed:
-    rows = daily_summary(user_id, days)
-    today_key = datetime.now(JST).strftime("%Y-%m-%d")
-    today = next((u for k, u in rows if k == today_key), None)
-    embed = discord.Embed(title="📅 日次レポート", description=f"**{player_name or user_id}**", color=0xF1C40F, timestamp=datetime.now(JST))
-    if today:
-        yp = today["money"]
-        n = today["battles"]
-        embed.add_field(name="💰 今日稼いだマネー", value=f"**{yp:+,}**", inline=True)
-        embed.add_field(name="🔁 周回数", value=f"{n:,} 周", inline=True)
-        embed.add_field(name="📐 1ステあたり", value=(f"{yp / n:,.1f} マネー" if n else "-"), inline=True)
-        if today.get("buys"):
-            embed.add_field(name="💠 人魂購入", value=f"{today['buys']} 回 (-{today['ym']:,} YM)", inline=True)
-        top = sorted((today.get("stages") or {}).items(), key=lambda kv: -kv[1])[:3]
-        if top:
-            embed.add_field(name="🎮 よく回したステージ", value=" / ".join(f"`{s}`×{c}" for s, c in top), inline=False)
-    else:
-        embed.add_field(name="💰 今日稼いだマネー", value="まだ周回していません", inline=False)
-    if len(rows) > 1:
         lines = []
-        total_yp = total_n = 0
-        for key, u in rows:
-            per = (u["money"] / u["battles"]) if u["battles"] else 0
-            lines.append(f"{key[5:]}  {u['money']:>8,} マネー  {u['battles']:>4}周  ({per:,.0f}/周)")
-            total_yp += u["money"]; total_n += u["battles"]
-        embed.add_field(name=f"📊 直近{len(rows)}日", value="```\n" + "\n".join(lines) + "\n```", inline=False)
-        embed.add_field(name="🧮 合計", value=f"**{total_yp:,}** マネー / {total_n:,}周", inline=False)
-    embed.set_footer(text="周回が終わったジョブの分だけ集計されます")
-    return embed
-
-
-async def send_daily_reports(bot):
-    if bot is None:
-        return 0
-    today_key = datetime.now(JST).strftime("%Y-%m-%d")
-    day = load_daily().get(today_key) or {}
-    sessions = load_sessions()
-    sent = 0
-    for uid, u in day.items():
-        if not u.get("battles"):
-            continue
-        try:
-            user = await bot.fetch_user(int(uid))
-            sess = sessions.get(uid) or {}
-            name = sess.get("playerName") or sess.get("player_name")
-            await user.send(embed=build_daily_embed(int(uid), name))
-            sent += 1
-        except Exception:
-            pass
-    return sent
-
-
-# ============================================================
-# 次の休憩までの分数
-# ============================================================
-def calc_minutes_until_rest() -> int:
-    if not ODD_HOUR_REST_ENABLED:
-        return 0
-    now = datetime.now(JST)
-    candidate = now.replace(minute=ODD_HOUR_REST_MIN, second=0, microsecond=0)
-    if candidate <= now:
-        candidate = candidate + timedelta(hours=1)
-    while candidate.hour % 2 == 0:
-        candidate = candidate + timedelta(hours=1)
-    diff = candidate - now
-    return max(0, int(diff.total_seconds() // 60))
-
-
-# ============================================================
-# パネルEmbed
-# ============================================================
-def build_panel_embed() -> discord.Embed:
-    slot_stat = get_slot_status()
-    q_stat = queue_status()
-
-    loops = load_loops()
-    running_jobs = [d for d in loops.values() if d.get("status") == "running"]
-    now_stage = "-"
-    if running_jobs:
-        running_jobs.sort(key=lambda x: x.get("started_at", ""), reverse=True)
-        d = running_jobs[0]
-        now_stage = str(d.get("current_stage") or d.get("stage_id") or "-")
-
-    hitodama_str = "-"
-    for v in _panel_hitodama_cache.values():
-        if v:
-            hitodama_str = v
-            break
-
-    minutes_left = calc_minutes_until_rest()
-
-    embed = discord.Embed(title="ぷにぷに 自動周回 — 状況", color=0x57F287, timestamp=datetime.now(JST))
-    embed.add_field(name="使用中スロット", value=f"**{slot_stat['running']} / {MAX_SLOTS}**", inline=True)
-    embed.add_field(name="予約待ち", value=f"**{q_stat['total']}件**", inline=True)
-    embed.add_field(name="空き", value=f"{slot_stat['free']}", inline=True)
-    embed.add_field(name="現在ステージ", value=f"`{now_stage}`", inline=True)
-    embed.add_field(name="人魂", value=f"**{hitodama_str}**", inline=True)
-    embed.add_field(name="次の休憩まで", value=f"**{minutes_left}分**", inline=True)
-    embed.set_footer(text=f"最終更新 — たった今 | {MAX_SLOTS}スロット + 予約キュー")
-    return embed
-
-
-# ============================================================
-# アカウント切替UI
-# ============================================================
-def build_accounts_embed(user_id) -> discord.Embed:
-    accounts = get_user_accounts(user_id)
-    active = get_active_id(user_id)
-    embed = discord.Embed(
-        title="👥 アカウント一覧",
-        description=("登録がありません。「➕ 追加ログイン」から登録してください。"
-                     if not accounts else
-                     "セレクトメニューで**操作対象の垢**を切り替えます。"),
-        color=0x5865F2, timestamp=datetime.now(JST)
-    )
-    loops = load_loops()
-    for acc in accounts:
-        gid = str(acc.get("player_id") or acc.get("userId"))
-        running = [d for d in loops.values()
-                   if str(d.get("account_id") or "") == str(gid) and d.get("status") == "running"]
-        marks = []
-        if gid == active:
-            marks.append("✅ 選択中")
-        if running:
-            d = running[0]
-            marks.append(f"🔄 周回中 `{d.get('current_stage') or d.get('stage_id')}` ({d.get('current', 0)}周)")
-        embed.add_field(
-            name=f"{acc.get('player_name', '不明')}",
-            value=(f"ID: `{gid}`\n"
-                   f"登録: {str(acc.get('saved_at', ''))[:16].replace('T', ' ')}\n"
-                   + ("\n".join(marks) if marks else "待機中")),
-            inline=True
-        )
-    running_total = sum(1 for d in loops.values() if d.get("status") == "running")
-    embed.set_footer(text=f"{len(accounts)} 垢登録 / 同時実行 {running_total}/{MAX_CONCURRENT_LOOPS}")
-    return embed
-
-
-class AccountSelect(ui.Select):
-    def __init__(self, user_id):
-        self.user_id = user_id
-        accounts = get_user_accounts(user_id)
-        active = get_active_id(user_id)
-        loops = load_loops()
-        busy = {str(d.get("account_id")) for d in loops.values() if d.get("status") == "running"}
-        options = []
-        for i, acc in enumerate(accounts[:25]):
-            gid = str(acc.get("player_id") or acc.get("userId"))
-            desc = f"ID: {gid}"
-            if gid in busy:
-                desc += " / 周回中"
-            options.append(discord.SelectOption(
-                label=str(acc.get("player_name", "不明"))[:100],
-                value=str(i),
-                description=desc[:100],
-                default=(gid == active),
-                emoji="🔄" if gid in busy else None,
-            ))
-        if not options:
-            options = [discord.SelectOption(label="（登録なし）", value="none")]
-        super().__init__(placeholder="操作する垢を選ぶ", options=options,
-                         min_values=1, max_values=1, disabled=not accounts)
-
-    async def callback(self, interaction: discord.Interaction):
-        v = self.values[0]
-        if v == "none":
-            return await interaction.response.defer()
-        accounts = get_user_accounts(self.user_id)
-        try:
-            idx = int(v)
-        except ValueError:
-            return await interaction.response.defer()
-        if idx >= len(accounts):
-            return await interaction.response.defer()
-        acc = accounts[idx]
-        gid = str(acc.get("player_id") or acc.get("userId"))
-        if not await set_active(self.user_id, gid):
-            return await interaction.response.send_message("❌ 切り替えに失敗しました。", ephemeral=True)
-        await interaction.response.edit_message(
-            content=f"✅ **{acc.get('player_name', '不明')}** に切り替えました。",
-            embed=build_accounts_embed(self.user_id),
-            view=AccountView(self.user_id)
+        for i, acc in enumerate(accs):
+            active_mark = "✅" if i == get_user_session(interaction.user.id).get("active_index", 0) else ""
+            lines.append(
+                f"{active_mark} `{acc.get('player_id')}` — {acc.get('player_name', '不明')}"
+            )
+        await safe_reply(
+            interaction,
+            content="\n".join(lines) or "なし",
+            ephemeral=True
         )
 
+    @bot.tree.command(name="switch", description="使用アカウントを切り替え")
+    @app_commands.describe(account_id="切り替え先アカウントID")
+    async def cmd_switch(interaction: discord.Interaction, account_id: str):
+        if not await safe_defer(interaction, ephemeral=True):
+            return
+        ok = await set_active(interaction.user.id, account_id)
+        if ok:
+            await safe_reply(interaction, content=f"✅ `{account_id}` に切り替えました。", ephemeral=True)
+        else:
+            await safe_reply(interaction, content=f"❌ `{account_id}` が見つかりません。", ephemeral=True)
 
-class AccountView(ui.View):
-    def __init__(self, user_id):
-        super().__init__(timeout=300)
-        self.user_id = user_id
-        self.add_item(AccountSelect(user_id))
+    @bot.tree.command(name="remove_account", description="アカウントを削除")
+    @app_commands.describe(account_id="削除するアカウントID")
+    async def cmd_remove_account(interaction: discord.Interaction, account_id: str):
+        if not await safe_defer(interaction, ephemeral=True):
+            return
+        ok = await remove_account(interaction.user.id, account_id)
+        if ok:
+            await safe_reply(interaction, content=f"✅ `{account_id}` を削除しました。", ephemeral=True)
+        else:
+            await safe_reply(interaction, content=f"❌ `{account_id}` が見つかりません。", ephemeral=True)
 
-    @ui.button(label="追加ログイン", style=discord.ButtonStyle.primary, emoji="➕", row=1)
-    async def add(self, interaction, button):
-        try:
-            await interaction.response.send_modal(LoginModal())
-        except (discord.NotFound, discord.HTTPException):
-            pass
-
-    @ui.button(label="更新", style=discord.ButtonStyle.secondary, emoji="🔄", row=1)
-    async def refresh(self, interaction, button):
-        await interaction.response.edit_message(
-            content=None,
-            embed=build_accounts_embed(self.user_id),
-            view=AccountView(self.user_id)
+    @bot.tree.command(name="queue", description="予約キュー状態表示")
+    async def cmd_queue(interaction: discord.Interaction):
+        if not await safe_defer(interaction, ephemeral=True):
+            return
+        q = load_queue()
+        pos = get_user_queue_position(interaction.user.id)
+        await safe_reply(
+            interaction,
+            content=(
+                f"全体: {len(q)} 件\n"
+                f"自分の位置: {pos if pos else 'なし'}"
+            ),
+            ephemeral=True
         )
 
-    @ui.button(label="選択中の垢を削除", style=discord.ButtonStyle.danger, emoji="🗑️", row=1)
-    async def remove(self, interaction, button):
-        acc = get_active_account(self.user_id)
-        if not acc:
-            return await interaction.response.send_message("⚠️ 登録がありません。", ephemeral=True)
-        gid = str(acc.get("player_id") or acc.get("userId"))
-        if account_busy(gid):
-            return await interaction.response.send_message(
-                "❌ この垢は周回中です。先に 🛑 停止してください。", ephemeral=True)
-        name = acc.get("player_name", "不明")
-        await remove_account(self.user_id, gid)
-        await interaction.response.edit_message(
-            content=f"🗑️ **{name}** を削除しました。",
-            embed=build_accounts_embed(self.user_id),
-            view=AccountView(self.user_id)
-        )
-
-    @ui.button(label="閉じる", style=discord.ButtonStyle.secondary, emoji="✅", row=2)
-    async def close(self, interaction, button):
-        try:
-            await interaction.response.edit_message(
-                content="✅ 垢の切り替えを終了しました。",
-                embed=None,
-                view=None
-            )
-        except (discord.NotFound, discord.HTTPException):
-            pass
-
-
-# ============================================================
-# セレクトメニュー
-# ============================================================
-class AccountActionSelect(ui.Select):
-    def __init__(self):
-        options = [
-            discord.SelectOption(label="ログイン", value="login", emoji="🔐",
-                                 description="垢を追加ログイン"),
-            discord.SelectOption(label="垢切り替え", value="switch", emoji="🔄",
-                                 description="使用する垢を切り替え"),
-            discord.SelectOption(label="垢一覧", value="list", emoji="📋",
-                                 description="登録垢の一覧を表示"),
-            discord.SelectOption(label="ログアウト（全垢削除）", value="logout", emoji="🚪",
-                                 description="セッションを完全削除"),
-        ]
-        super().__init__(
-            placeholder="アカウント操作を選択...",
-            options=options,
-            custom_id="ywp_panel:account_select",
-            min_values=1, max_values=1,
-        )
-
-    async def callback(self, interaction: discord.Interaction):
-        v = self.values[0]
-        if v == "login":
-            try:
-                await interaction.response.send_modal(LoginModal())
-            except (discord.NotFound, discord.HTTPException):
-                pass
-            return
-        if v == "switch":
-            if not await safe_defer(interaction):
-                return
-            await safe_reply(
-                interaction,
-                embed=build_accounts_embed(interaction.user.id),
-                view=AccountView(interaction.user.id),
-                ephemeral=True
-            )
-            return
-        if v == "list":
-            if not await safe_defer(interaction):
-                return
-            accounts = get_user_accounts(interaction.user.id)
-            if not accounts:
-                return await safe_reply(interaction, content="❌ 垢が登録されていません。", ephemeral=True)
-            active = get_active_id(interaction.user.id)
-            embed = discord.Embed(
-                title="📋 登録垢一覧",
-                description=f"合計: **{len(accounts)}件**",
-                color=0x5865F2,
-                timestamp=datetime.now(JST)
-            )
-            for acc in accounts:
-                gid = str(acc.get("player_id") or acc.get("userId"))
-                mark = "🟢" if gid == active else "⚪"
-                embed.add_field(
-                    name=f"{mark} {acc.get('player_name', '不明')}",
-                    value=f"ID: `{gid}`",
-                    inline=True
-                )
-            await safe_reply(interaction, embed=embed, ephemeral=True)
-            return
-        if v == "logout":
-            if not await safe_defer(interaction):
-                return
-            # ★ セッション全削除 + 予約削除
-            n = await remove_all_accounts(interaction.user.id)
-            removed_q = await remove_user_from_queue(interaction.user.id)
-            msg = f"✅ ログアウトしました（{n} 垢削除）"
-            if removed_q:
-                msg += chr(10) + f"🗑️ 予約を {removed_q}件 削除しました"
-            await safe_reply(interaction, content=msg, ephemeral=True)
-            return
-
-
-class ProgressActionSelect(ui.Select):
-    def __init__(self):
-        options = [
-            discord.SelectOption(label="ステージ一覧", value="stages", emoji="🎯",
-                                 description="クリア済みステージIDを表示"),
-            discord.SelectOption(label="ステージ進行", value="progress", emoji="🎯",
-                                 description="開始〜終了IDまで順番に周回"),
-            discord.SelectOption(label="イベント自動進行", value="event", emoji="🎪",
-                                 description="rc=100/1303 で次ブロック001へ"),
-            discord.SelectOption(label="効率計測", value="bench", emoji="📐",
-                                 description="ステージごとのマネー効率を比較"),
-            discord.SelectOption(label="進行確認", value="view", emoji="📈",
-                                 description="直近の進行状況を表示"),
-            discord.SelectOption(label="実行状況", value="running", emoji="📡",
-                                 description="現在の実行状況を表示"),
-            discord.SelectOption(label="スロット状況", value="slots", emoji="📊",
-                                 description="10スロットの使用状況を表示"),
-            discord.SelectOption(label="予約状況", value="queue", emoji="📋",
-                                 description="予約キューの待機状況を表示"),
-        ]
-        super().__init__(
-            placeholder="進行 / ステージ操作を選択...",
-            options=options,
-            custom_id="ywp_panel:progress_select",
-            min_values=1, max_values=1,
-        )
-
-    async def callback(self, interaction: discord.Interaction):
-        v = self.values[0]
-        if v == "stages":
-            if not await safe_defer(interaction):
-                return
-            acc = get_active_account(interaction.user.id)
-            if not acc:
-                return await safe_reply(interaction, content="❌ ログインしていません。", ephemeral=True)
-            client = build_client_from_account(acc)
-            try:
-                await asyncio.to_thread(client.login, acc["userId"])
-                update_account_tokens(interaction.user.id, client)
-            except Exception as e:
-                return await safe_reply(interaction, content=f"❌ ログイン失敗: `{str(e)[:200]}`", ephemeral=True)
-            stage_raw = client.save.get("ywp_user_stage")
-            if not stage_raw:
-                return await safe_reply(interaction, content="❌ ステージ情報がありません。", ephemeral=True)
-            stages = parse_stages(stage_raw)
-            cleared = sorted([sid for sid, info in stages.items() if info["cleared"]])
-            if not cleared:
-                return await safe_reply(interaction, content="❌ クリア済みステージがありません。", ephemeral=True)
-            categorized = categorize_stages(cleared)
-            chunks = []
-            current = ""
-            for cat_name, cat_ids in categorized.items():
-                header = f"\n**{cat_name}** ({len(cat_ids)}件)\n"
-                body_lines = []
-                for i in range(0, len(cat_ids), 10):
-                    c = cat_ids[i:i+10]
-                    body_lines.append(" ".join(f"`{sid}`" for sid in c))
-                section = header + "\n".join(body_lines) + "\n"
-                if len(current) + len(section) > 1900:
-                    chunks.append(current); current = section
-                else:
-                    current += section
-            if current:
-                chunks.append(current)
-            embed = discord.Embed(
-                title="🎯 クリア済みステージ",
-                description=f"**垢**: {acc.get('player_name', '不明')}\n**合計**: {len(cleared)}件",
-                color=0x5865F2, timestamp=datetime.now(JST)
-            )
-            embed.add_field(name="📋 分類", value=chunks[0][:1024], inline=False)
-            await safe_reply(interaction, embed=embed, ephemeral=True)
-            for chunk in chunks[1:]:
-                try:
-                    await interaction.followup.send(chunk, ephemeral=True)
-                except Exception:
-                    break
-            return
-        if v == "progress":
-            try:
-                await interaction.response.send_modal(ProgressModal())
-            except (discord.NotFound, discord.HTTPException):
-                pass
-            return
-        if v == "event":
-            try:
-                await interaction.response.send_modal(EventProgressModal())
-            except (discord.NotFound, discord.HTTPException):
-                pass
-            return
-        if v == "bench":
-            try:
-                await interaction.response.send_modal(BenchmarkModal())
-            except (discord.NotFound, discord.HTTPException):
-                pass
-            return
-        if v == "view":
-            if not await safe_defer(interaction):
-                return
-            loops = load_loops()
-            my_loops = [
-                (k, d) for k, d in loops.items()
-                if d.get("user_id") == interaction.user.id
-                and d.get("type") in ("progress", "event", "farm", "bench")
-            ]
-            if not my_loops:
-                return await safe_reply(interaction, content="❌ 進行中の処理がありません。", ephemeral=True)
-            my_loops.sort(key=lambda x: x[1].get("started_at", ""), reverse=True)
-            key, data = my_loops[0]
-            status = data.get("status", "running")
-            if status == "done":
-                st = "✅ 完了"
-            elif status == "stopped":
-                st = "🛑 停止"
-            elif status == "fatal":
-                st = "❌ エラー停止"
-            elif status == "paused_hitodama":
-                st = "⏸️ 人魂不足で停止中"
-            else:
-                st = "🎯 進行中..."
-            embed = build_progress_embed(key, data, st)
-            if data.get("end_reason"):
-                embed.add_field(name="🏁 終了理由", value=data["end_reason"], inline=False)
-            await safe_reply(interaction, embed=embed, ephemeral=True)
-            return
-        if v == "running":
-            if not await safe_defer(interaction):
-                return
-            loops = load_loops()
-            running_loops = [
-                (k, d) for k, d in loops.items()
-                if d.get("status") in ("running", "paused_hitodama")
-            ]
-            embed = discord.Embed(
-                title="📡 現在の実行状況",
-                description=f"**同時実行: {len([r for r in running_loops if r[1].get('status') == 'running'])} / {MAX_CONCURRENT_LOOPS}**",
-                color=0x5865F2,
-                timestamp=datetime.now(JST)
-            )
-            if not running_loops:
-                embed.add_field(name="状態", value="現在実行中の処理はありません。", inline=False)
-            else:
-                for key, data in running_loops[:7]:
-                    user_id = data.get("user_id")
-                    member = interaction.guild.get_member(user_id) if interaction.guild else None
-                    name = member.display_name if member else f"<@{user_id}>"
-                    status = "🔄 実行中" if data.get("status") == "running" else "⏸️ 停止中"
-                    loop_type = data.get("type", "farm")
-                    pid = data.get("account_id", "-")
-                    if loop_type == "progress":
-                        info = f"垢: `{pid}`\n範囲: `{data.get('start_id')}`〜`{data.get('end_id')}`\n進捗: **{data.get('current', 0)} / {data.get('total', 0)}**"
-                    elif loop_type == "event":
-                        info = f"垢: `{pid}`\n開始: `{data.get('start_id')}`\n処理: **{data.get('current', 0)}**"
-                    else:
-                        info = f"垢: `{pid}`\nステージ: `{data.get('stage_id')}`\n進捗: **{data.get('current', 0)} / {data.get('count', 0)}**"
-                    embed.add_field(name=f"👤 {name} ({status}) [{loop_type}]", value=info, inline=True)
-            await safe_reply(interaction, embed=embed, ephemeral=True)
-            return
-        if v == "slots":
-            if not await safe_defer(interaction):
-                return
-            data = load_slots()
-            embed = discord.Embed(
-                title=f"📊 スロット状況（{MAX_SLOTS}枠）",
-                description="各スロットの使用状況",
-                color=0x5865F2,
-                timestamp=datetime.now(JST)
-            )
-            for i in range(MAX_SLOTS):
-                s = data["slots"].get(str(i))
-                if not s:
-                    embed.add_field(name=f"Slot {i}", value="⚪ 空き", inline=True)
-                else:
-                    status = "🔄 実行中" if s.get("status") == "running" else "⏸️ 停止中"
-                    embed.add_field(
-                        name=f"Slot {i}",
-                        value=f"{status}\n{s.get('type', '?')}: {s.get('stage_info', '-')}",
-                        inline=True
-                    )
-            await safe_reply(interaction, embed=embed, ephemeral=True)
-            return
-        if v == "queue":
-            if not await safe_defer(interaction):
-                return
-            queue = load_queue()
-            if not queue:
-                return await safe_reply(interaction, content="📋 予約はありません。", ephemeral=True)
-            embed = discord.Embed(
-                title=f"📋 予約キュー（{len(queue)}件）",
-                color=0x5865F2, timestamp=datetime.now(JST)
-            )
-            for i, e in enumerate(queue[:15], 1):
-                uid = e.get("user_id")
-                member = interaction.guild.get_member(uid) if interaction.guild else None
-                name = member.display_name if member else f"<@{uid}>"
-                embed.add_field(
-                    name=f"{i}. {name}",
-                    value=f"{e.get('job_type')}: {e.get('stage_info')}",
-                    inline=False
-                )
-            await safe_reply(interaction, embed=embed, ephemeral=True)
-            return
-
-
-# ============================================================
-# パネルView
-# ============================================================
-class PanelView(ui.View):
-    def __init__(self):
-        super().__init__(timeout=None)
-        self.add_item(AccountActionSelect())
-        self.add_item(ProgressActionSelect())
-
-    @ui.button(label="周回開始", style=discord.ButtonStyle.success, emoji="▶️", custom_id="ywp_panel:farm", row=2)
-    async def farm(self, interaction, button):
-        try:
-            await interaction.response.send_modal(FarmModal())
-        except (discord.NotFound, discord.HTTPException):
-            pass
-
-    @ui.button(label="停止", style=discord.ButtonStyle.danger, emoji="🛑", custom_id="ywp_panel:stop", row=2)
-    async def stop(self, interaction, button):
-        if not await safe_defer(interaction):
+    @bot.tree.command(name="stop", description="自分のジョブを停止")
+    async def cmd_stop(interaction: discord.Interaction):
+        if not await safe_defer(interaction, ephemeral=True):
             return
         loops = load_loops()
-        count = 0
-        for key, data in loops.items():
-            if data.get("user_id") == interaction.user.id and data.get("status") in ("running", "paused_hitodama"):
-                data["status"] = "stopped"
-                count += 1
-        for key in list(loops.keys()):
-            if loops[key].get("user_id") != interaction.user.id:
-                continue
-            if loops[key].get("status") in ("stopped", "done", "fatal", "error"):
-                del loops[key]
+        deleted = 0
+        for k, v in list(loops.items()):
+            if v.get("user_id") == interaction.user.id and v.get("status") in ("running", "paused_hitodama"):
+                del loops[k]
+                deleted += 1
         await save_loops_async(loops)
-        # ★ 予約も削除
-        removed = await remove_user_from_queue(interaction.user.id)
-        msg = f"🛑 {count}件の処理を停止しました"
-        if removed:
-            msg += chr(10) + f"🗑️ 予約を {removed}件 削除しました"
-        await safe_reply(interaction, content=msg, ephemeral=True)
+        rem = await remove_user_from_queue(interaction.user.id)
+        await safe_reply(
+            interaction,
+            content=f"🛑 実行中 {deleted}件 / 予約 {rem}件 を停止しました。",
+            ephemeral=True
+        )
+        await update_panel_on_change()
 
 
 # ============================================================
-# 計測結果の保存
+# Bot セットアップ
 # ============================================================
-def load_bench() -> dict:
-    return load_json(BENCH_FILE, {})
-
-
-def save_bench_results(results: list, user_id=None):
-    data = load_bench()
-    for r in results:
-        kind, label, _ = metric_label([r])
-        per_h = metric_of(r, kind, "per_hitodama")
-        if not per_h:
-            continue
-        data[str(r["stage_id"])] = {
-            "metric_name": label,
-            "yp_per": metric_of(r, kind, "per"),
-            "hitodama_per": r.get("hitodama_per"),
-            "yp_per_hitodama": per_h,
-            "money_per": r.get("money_per"),
-            "sec_per": r.get("sec_per"),
-            "samples": r.get("success"),
-            "measured_at": datetime.now(JST).isoformat(),
-            "measured_by": user_id,
-        }
-    save_json(BENCH_FILE, data)
-    return data
-
-
-# ============================================================
-# Cog
-# ============================================================
-class YWPPanel(commands.Cog):
-    def __init__(self, bot):
+class YWPCog(commands.Cog):
+    def __init__(self, bot: commands.Bot):
         self.bot = bot
         set_bot_ref(bot)
-        self.restore_panel()
-        reset_stale_loops()
-        reset_stale_slots()
-        if DAILY_REPORT_ENABLED:
-            self.daily_report.start()
+        self.daily_report.start()
 
-    def cog_unload(self):
-        self.daily_report.cancel()
+    async def cog_load(self):
+        await setup_commands(self.bot)
 
-    @tasks.loop(time=dtime(hour=DAILY_REPORT_HOUR, minute=DAILY_REPORT_MINUTE, tzinfo=JST))
+    async def cog_unload(self):
+        self.daily_report.stop()
+
+    @tasks.loop(minutes=1)
     async def daily_report(self):
-        await send_daily_reports(self.bot)
+        if not DAILY_REPORT_ENABLED:
+            return
+        now = datetime.now(JST)
+        if now.hour == DAILY_REPORT_HOUR and now.minute == DAILY_REPORT_MINUTE:
+            pass  # 日次レポート処理をここに追加可
 
     @daily_report.before_loop
     async def before_daily_report(self):
         await self.bot.wait_until_ready()
 
-    def restore_panel(self):
-        panel = load_panel()
-        for guild_id, data in panel.items():
-            msg_id = data.get("message_id")
-            if msg_id:
-                try:
-                    self.bot.add_view(PanelView(), message_id=int(msg_id))
-                except Exception as e:
-                    print(f"⚠️ パネル復元失敗: {e}")
 
-    @app_commands.command(name="パネル設置", description="🎮 ぷにぷに自動周回パネルを設置（管理者）")
-    @app_commands.default_permissions(administrator=True)
-    async def ywp_panel(self, interaction, channel: discord.TextChannel):
-        if not await safe_defer(interaction):
-            return
-        embed = build_panel_embed()
-        view = PanelView()
-        msg = await channel.send(embed=embed, view=view)
-        panel = load_panel()
-        panel[str(interaction.guild_id)] = {
-            "channel_id": channel.id,
-            "message_id": msg.id,
-            "created_at": datetime.now(JST).isoformat(),
-        }
-        save_panel(panel)
-        self.bot.add_view(PanelView(), message_id=msg.id)
-        await safe_reply(interaction, content=f"✅ `{channel.mention}` にパネルを設置しました。", ephemeral=True)
-
-
-# ============================================================
-# setup
-# ============================================================
-async def setup(bot):
-    await bot.add_cog(YWPPanel(bot))
+async def setup(bot: commands.Bot):
+    await bot.add_cog(YWPCog(bot))
